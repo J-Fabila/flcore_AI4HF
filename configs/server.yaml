@@ -1,0 +1,20 @@
+# Server variables
+set_server : True
+num_clients : 5
+client_id : None
+federated : True
+use_certificates : False
+strategy : FedAvg
+metrics_aggregation: weighted_average
+#curl https://ifconfig.me
+server_address : 0.0.0.0:8080
+#161.116.133.136:8080
+#0.0.0.0:8080
+
+#161.116.133.187
+#0.0.0.0:8080
+num_rounds : 10
+
+min_fit_clients : 5
+min_evaluate_clients : 4
+min_available_clients : 4

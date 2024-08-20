@@ -1,0 +1,59 @@
+# Device variables
+device : cuda
+n_gpu : 1
+n_gpu_nodes : 1
+num_workers : 0
+client_id : 1
+num_clients : 4
+set_server : False
+server_address : 161.116.4.119:4433
+
+# Model variables
+federated : True
+use_certificates : True
+local_model : Resnet50
+#Resnet152
+load_checkpoint : None
+task : Classification
+in_channels : 1
+n_classes : 2
+
+# Training variables
+batch_size : 8
+train_size : 0.8
+val_size : 0.1
+test_size : 0.1
+epochs : 10
+num_rounds : 10
+verbatim : False
+
+epochs_per_round : [5,10,15,20]
+# Meaning 5 epochs in round 0,10 in round 1, ...
+
+# Optimizer variables
+optimizer : Adam # 'Adam' or 'SGD'
+dropout : 0.1
+lr : 0.001
+lr_min : 1e-7
+lr_factor : 0.5
+lr_patience : 10
+lr_scheduler : ReduceLROnPlateau
+clip : 1.0
+early_stopping_patience : 10
+
+# Data set variables
+dataset : LightningWrapperData
+dataset_root : /PATH/TO/FILES/X-Ray_1_.pt
+target_label : Plane
+n_channels : 1
+#data/CIFAR/cifar_1.pt
+
+# Logging variables
+log_path : TB_X_Ray
+every_n_epochs : 1
+wandb_track : True
+wandb_project : TB_X_Ray
+# 60b70f9c192ed76eccd2a580effc8008936f6e78
+wandb_run_name : Client_1
+wandb_entity': 'jorgefabila1997'
+save_top_k : 10

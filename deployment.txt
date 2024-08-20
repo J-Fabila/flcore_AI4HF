@@ -1,0 +1,28 @@
+
+Dear Carina and Patricia, 
+ 
+I hope this message finds you well.
+
+I was informed by Laia and Carles that you are interested in becoming a node for the federated processing. Below, I have outlined the instructions for deploying the client:
+
+Prerequisites:
+Docker is installed on your system and can be run without sudo.
+Python 3.x python3.8-venv are installed.
+Outgoing connection to the RabbitMQ (port: 5671, ip: fl.bsc.es) and flower (port: 4433, ip: fl.flower.bsc.es) servers.
+
+Installation steps:
+git clone https://gitlab.bsc.es/fl/FLManager
+cd FLManager
+cd client
+cd config
+Put at the config folder the unzipped rabbitmq-ca folder (attached)
+Rename the config_template.py file to config.py with the correct variables. You can use as node_name HULAFE and for the node_user and node_password centre8:password. Then you will need to adjust the paths for the ssl certificates with the root to the flmanager folder and also adjust the data_path and sandbox_path (where the platform can write the logs and results). The rest should stay the same
+cd ..
+bash install.sh
+bash start.sh
+
+If the installation process was successful, you should see the message "Awaiting for requests" when you view the receiver.log file. Once you have completed these steps, please inform me, and I will proceed with testing.
+
+Please don't hesitate to reach out if you encounter any issues or have any questions.
+
+Thank you for your cooperation, and best wishes,
