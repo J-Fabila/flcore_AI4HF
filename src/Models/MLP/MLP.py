@@ -3,14 +3,6 @@ import torch.nn as nn
 from torchdiffeq import odeint_adjoint as odeint
 from typing import Dict, Tuple
 
-"""
-CAMBIA:
- * Los parámetros que ingresan con config deben ser compatibles con la clase Parameters
- * Agrega esos parámetros nuevos a la clase
- * Agrega el wrapper este de make_net como opción en el model wrapper principal
- * Analiza qué tipo de salida tenemos y que sea compatible cuando regrese a la clase principal
- * Mira si tenemos que modificar algo en el entrenamiento, casi seguro que no, pero busca
-"""
 def make_net(input_size: int, hidden_size: int, num_layers: int, output_size: int, 
              dropout: float = 0, batch_norm: bool = False, act: str = "elu", softplus: bool = True) -> nn.Sequential:
     """
