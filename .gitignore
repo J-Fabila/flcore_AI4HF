@@ -1,0 +1,4 @@
+src/Models/trainer.py
+.ipynb_checkpoints/*
+datos.ipynb
+
