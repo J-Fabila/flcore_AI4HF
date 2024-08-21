@@ -106,7 +106,10 @@ class ModelWrapper(pl.LightningModule):
             temp_loss += loss.item()
             tr_loss += loss.item()
             #nb_tr_examples += inputs['features'].size(0)
-            return tr_loss #/ nb_tr_steps
+            logs = {'train_loss': tr_loss}
+            self.log("train_loss", tr_loss,batch_size=self.params.batch_size) #,prog_bar=False, on_step=False)
+            return {'loss': loss, 'log': logs}
+            #return tr_loss #/ nb_tr_steps
             # ********** * * * * *  *  *   *    *    *   *  *  *  *  * * * * *********
         else:
             loss = self.step(batch,"train")
@@ -166,8 +169,15 @@ class ModelWrapper(pl.LightningModule):
             tempauroc = cindex(hazard_seqs[:, end_timepoint], y_label, y_time)
 
             if not return_ph:
-                return tempprc, tempauroc, loss_temp  #/ counter
-            return y_label, hazard_seqs, y_time
+                #return tempprc, tempauroc, loss_temp  #/ counter
+                logs = {'val_temp': loss_temp,"tempauroc":tempauroc,"tempprc":tempprc}
+                self.log_dict({"val_temp":loss_temp,"tempauroc":tempauroc,"hausdorff":tempprc})
+            else:
+                #return y_label, hazard_seqs, y_time
+                logs = {'y_label': y_label,"hazard_seqs":hazard_seqs,"y_time":y_time}
+                self.log_dict({"y_label":y_label,"hazard_seqs":hazard_seqs,"y_time":y_time})
+            
+            return {"loss" : loss, 'log' : logs}
             # ********** * * * * *  *  *   *    *    *   *  *  *  *  * * * * *********
         else:
             loss = self.step( batch, "val")
