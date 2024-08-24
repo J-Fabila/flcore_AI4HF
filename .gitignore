@@ -1,4 +1,5 @@
-src/Models/trainer.py
+src/Models/MLP/trainer.py
+src/Models/MLP/data.py
 .ipynb_checkpoints/*
 datos.ipynb
 
