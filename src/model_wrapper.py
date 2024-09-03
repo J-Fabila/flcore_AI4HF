@@ -52,7 +52,7 @@ class ModelWrapper(pl.LightningModule):
         if self.local_model == "MLP":
             #orward(self, inputs: Dict[str, torch.Tensor], label: torch.Tensor, full_eval: bool = False) -> Tuple[list, torch.Tensor]:
             inputs , label, full_eval = image[0], image[1], image[2]
-            return self.forward(inputs, label, full_eval)
+            return self.local_model.forward(inputs, label, full_eval)
         else:
             return  self.local_model(image)
 
@@ -95,16 +95,15 @@ class ModelWrapper(pl.LightningModule):
                 float: Average training loss for the epoch.
             """
             self.local_model.train()
-            tr_loss = 0
-            temp_loss = 0
+            #tr_loss = 0
+            #temp_loss = 0
 #            nb_tr_examples, nb_tr_steps = 0, 0
             ## Aquí el batch puede ser problemático porque no hablamos del mismo
             #  batch creo
             inputs, label = batch
             logits, loss = self.local_model(inputs, label)
-            loss.backward()
-            temp_loss += loss.item()
-            tr_loss += loss.item()
+            #temp_loss += loss.item()
+            tr_loss = loss.item()
             #nb_tr_examples += inputs['features'].size(0)
             logs = {'train_loss': tr_loss}
             self.log("train_loss", tr_loss,batch_size=self.params.batch_size) #,prog_bar=False, on_step=False)
