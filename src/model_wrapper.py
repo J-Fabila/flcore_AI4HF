@@ -98,9 +98,9 @@ class ModelWrapper(pl.LightningModule):
             #tr_loss = 0
             #temp_loss = 0
 #            nb_tr_examples, nb_tr_steps = 0, 0
-            ## Aquí el batch puede ser problemático porque no hablamos del mismo
-            #  batch creo
-            inputs, label = batch
+            
+            inputs = batch["batch"]
+            label = batch["label"]
             logits, loss = self.local_model(inputs, label)
             #temp_loss += loss.item()
             tr_loss = loss.item()
@@ -147,7 +147,8 @@ class ModelWrapper(pl.LightningModule):
             loss_temp = 0
             counter = 0
 
-            inputs, label = batch
+            inputs = batch["batch"]
+            label = batch["label"]
             with torch.no_grad():
                 logits, loss = self.local_model(inputs, label)
             time2event = inputs['t']
