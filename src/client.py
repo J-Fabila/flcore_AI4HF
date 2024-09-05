@@ -13,7 +13,7 @@ from test import test
 from utils import Parameters
 from model_wrapper import ModelWrapper
 
-from dataloaders import MMsDataSet,LightningWrapperData
+from dataloaders import MMsDataSet,LightningWrapperData, MLPWrapperData
 
 class FlowerClient(fl.client.NumPyClient):
     def __init__(self, params):
@@ -31,6 +31,17 @@ class FlowerClient(fl.client.NumPyClient):
             self.dataset = MMsDataSet(params)
         elif params.dataset == "LightningWrapperData":
             self.dataset = LightningWrapperData(params)
+        elif params.local_model == "MLP":
+            self.dataset = MLPWrapperData(params)
+            if params.MLP_preprocess:
+            #************* * * *  *  *  *   *  Data preprocessing  *    *  *  *  *  * * *************
+            #     · · ·
+            #     · · ·
+            #     · · ·
+            #************* * * *  *  *  *   *   *      *     *     *    *  *  *  *  * * *************
+                pass
+            else:
+                pass            
         else:
             print("Dataset not available")
             exit()
