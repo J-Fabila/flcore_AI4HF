@@ -3,3 +3,9 @@ src/Models/MLP/data.py
 .ipynb_checkpoints/*
 datos.ipynb
 
+mlp_test/wandb/*
+src/__pycache__/*
+src/Models/__pycache__/*
+src/Models/MLP/__pycache__/*
+src/Models/MLP/.ipynb_checkpoints/*
+src/.ipynb_checkpoints/*
