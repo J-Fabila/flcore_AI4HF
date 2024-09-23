@@ -9,17 +9,27 @@ set_server : False
 server_address : 161.116.4.119:4433
 
 # Model variables
-federated : True
-use_certificates : True
-local_model : Resnet50
+federated : False
+use_certificates : False
+local_model : MLP
 #Resnet152
 load_checkpoint : None
 task : Classification
+num_labels : 1
+feature_size : 13
+mlp_hidden_sizes : [128, 256, 128]
+mlp_output_size : 64
+ode_hidden_size : 64
+ode_num_layers : 2
+ode_batch_norm : False
+time_nums: 50
+MLP_preprocess : None
+
 in_channels : 1
 n_classes : 2
 
 # Training variables
-batch_size : 8
+batch_size : 512
 train_size : 0.8
 val_size : 0.1
 test_size : 0.1
@@ -42,17 +52,18 @@ clip : 1.0
 early_stopping_patience : 10
 
 # Data set variables
-dataset : LightningWrapperData
-dataset_root : /PATH/TO/FILES/X-Ray_1_.pt
+dataset_root : None
+train_filepath : /home/jorge/work_dir/federado/flcore_AI4HF/data/train_suffix.npz
+test_filepath : /home/jorge/work_dir/federado/flcore_AI4HF/data/valid_suffix.npz
 target_label : Plane
 n_channels : 1
 #data/CIFAR/cifar_1.pt
 
 # Logging variables
-log_path : TB_X_Ray
+log_path : mlp_test
 every_n_epochs : 1
-wandb_track : True
-wandb_project : TB_X_Ray
+wandb_track : False
+wandb_project : MLP_Fed
 # 60b70f9c192ed76eccd2a580effc8008936f6e78
 wandb_run_name : Client_1
 wandb_entity': 'jorgefabila1997'
