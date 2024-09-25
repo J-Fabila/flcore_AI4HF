@@ -30,6 +30,16 @@ class Parameters:
             'load_checkpoint': None,
             'task': None,
             'in_channels': None,
+            'num_labels' : 1,
+            'feature_size' : 1,
+            'mlp_hidden_sizes' : [1,1],
+            'mlp_output_size' : 1,
+            'ode_hidden_size' : 1,
+            'ode_num_layers' : 1,
+            'ode_batch_norm' : 1,
+            'time_nums': 50,
+
+            'MLP_preprocess' : None,
             'n_classes' : None,
             'UNet_depth': None,
             'UNet_bilinear': None,
@@ -58,6 +68,8 @@ class Parameters:
             # Data set variables
             'dataset': None,
             'dataset_root': None,
+            'train_filepath': None,
+            'test_filepath': None,
             'target_label': None,
             'n_channels' : 1,
 
@@ -102,6 +114,16 @@ class Parameters:
         self.local_model = self.params["local_model"]
         self.load_checkpoint = self.params["load_checkpoint"]
         self.task = self.params["task"]
+        self.num_labels = self.params["num_labels"]
+        self.feature_size = self.params["feature_size"]
+        self.mlp_hidden_sizes = self.params["mlp_hidden_sizes"]
+        self.mlp_output_size = self.params["mlp_output_size"]
+        self.ode_hidden_size = self.params["ode_hidden_size"]
+        self.ode_num_layers = self.params["ode_num_layers"]
+        self.ode_batch_norm = self.params["ode_batch_norm"]
+        self.time_nums = self.params["time_nums"]
+
+        self.MLP_preprocess = ['MLP_preprocess']
         self.in_channels = self.params["in_channels"]
         self.n_classes = self.params["n_classes"]
         self.UNet_depth = self.params["UNet_depth"]
@@ -131,6 +153,8 @@ class Parameters:
         # Data set variables
         self.dataset = self.params["dataset"]
         self.dataset_root = self.params["dataset_root"]
+        self.train_filepath = self.params["train_filepath"]
+        self.test_filepath = self.params["test_filepath"]
         self.target_label = self.params["target_label"]
         self.n_channels = self.params["n_channels"]
         
