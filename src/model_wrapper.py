@@ -49,8 +49,10 @@ class ModelWrapper(pl.LightningModule):
         self.save_hyperparameters(self.params.params)
 
     def forward(self, image):
+        print("MODEL_WRAPPER::FORWARD")
         if self.local_model == "MLP":
             #orward(self, inputs: Dict[str, torch.Tensor], label: torch.Tensor, full_eval: bool = False) -> Tuple[list, torch.Tensor]:
+            print("IMAGE",type(image))
             inputs , label, full_eval = image[0], image[1], image[2]
             return self.local_model.forward(inputs, label, full_eval)
         else:
@@ -79,6 +81,7 @@ class ModelWrapper(pl.LightningModule):
         return loss.to(dtype = torch.float32)
 
     def training_step(self, batch, batch_idx):
+        print("MODEL_WRAPPER::TRAINING STEP")
         if self.local_model == "MLP":
             # ********** * * * * *  *  *   *    *    *   *  *  *  *  * * * * *********
             #(model: torch.nn.Module, train_dataloader: DataLoader, optimizer: Optimizer, epoch: int) -> float:
@@ -99,8 +102,11 @@ class ModelWrapper(pl.LightningModule):
             #temp_loss = 0
 #            nb_tr_examples, nb_tr_steps = 0, 0
             
-            inputs = batch["batch"]
+            #inputs = batch["batch"]
+            inputs = {"t":batch["t"],"init_cond":batch["init_cond"],"features":batch["features"],"index":batch["index"]}
             label = batch["label"]
+            print("???????????????????????????????????????")
+            print("model_wrapper::train_step::batch_size",inputs.shape)
             logits, loss = self.local_model(inputs, label)
             #temp_loss += loss.item()
             tr_loss = loss.item()
@@ -117,7 +123,10 @@ class ModelWrapper(pl.LightningModule):
             return {'loss': loss, 'log': logs}
 
     def validation_step(self, batch, batch_idx):
-        if self.local_model == "MLP":
+        print("MODEL_WRAPPER::VALIDATION_STEP")
+        print("MLP ",self.params.local_model)
+        if self.params.local_model == "MLP":
+            print("MODEL_WRAPPER::LOCAL_MODEL::MLP")
             # ********** * * * * *  *  *   *    *    *   *  *  *  *  * * * * *********
             #validate_one_epoch(model: torch.nn.Module, valid_dataloader: DataLoader, end_timepoint: int = 12, return_ph: bool = False) -> Tuple[float, float, float] or Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
             end_timepoint = 12 #: int = 12
@@ -147,32 +156,45 @@ class ModelWrapper(pl.LightningModule):
             loss_temp = 0
             counter = 0
 
-            inputs = batch["batch"]
+            #inputs = batch["batch"]
+            inputs = {"t":batch["t"],"init_cond":batch["init_cond"],"features":batch["features"],"index":batch["index"]}
+
             label = batch["label"]
+            print("MODEL_WRAPPER::VAL STEP::FORWARD EMPIEZA")
+            print("::::::::::::::: inputs",inputs.keys())
+            print(inputs["t"].shape)
+            print(inputs["init_cond"].shape)
+            print(inputs["features"].shape)
+            print(inputs["index"].shape)
             with torch.no_grad():
                 logits, loss = self.local_model(inputs, label)
             time2event = inputs['t']
+
+            print("MODEL_WRAPPER::VAL STEP::FORWARD::TERMINA")
             ####################################################
             y_label.append(label)
             y.append(logits[0])
             hazard_seqs.append(logits[1])
             y_time.append(time2event)
             loss_temp += loss.item()
-
+            print(" Y LABEL NO SE QUE")
             y_label = torch.cat(y_label, dim=0)
             y = torch.cat(y, dim=0)
             y_time = torch.cat(y_time, dim=0)
             hazard_seqs = torch.cat(hazard_seqs, dim=0)
             ####################################################
-
+            print("PRECISION TEST")
             tempprc, _, _ = precision_test(hazard_seqs[:, end_timepoint], y_label)
+            print(" CINDEX")
             tempauroc = cindex(hazard_seqs[:, end_timepoint], y_label, y_time)
-
+            print("INICA EL RETURN")
             if not return_ph:
+                print("NOT RETURN PH")
                 #return tempprc, tempauroc, loss_temp  #/ counter
                 logs = {'val_temp': loss_temp,"tempauroc":tempauroc,"tempprc":tempprc}
                 self.log_dict({"val_temp":loss_temp,"tempauroc":tempauroc,"hausdorff":tempprc})
             else:
+                print("ELSE")
                 #return y_label, hazard_seqs, y_time
                 logs = {'y_label': y_label,"hazard_seqs":hazard_seqs,"y_time":y_time}
                 self.log_dict({"y_label":y_label,"hazard_seqs":hazard_seqs,"y_time":y_time})
