@@ -26,13 +26,9 @@ class FlowerClient(fl.client.NumPyClient):
 
         model = ModelWrapper(params)
         self.model = model.to(device)
-        
         if params.dataset == "MMs":
             self.dataset = MMsDataSet(params)
-        elif params.dataset == "LightningWrapperData":
-            self.dataset = LightningWrapperData(params)
         elif params.local_model == "MLP":
-            self.dataset = MLPWrapperData(params)
             if params.MLP_preprocess:
             #************* * * *  *  *  *   *  Data preprocessing  *    *  *  *  *  * * *************
             #     · · ·
@@ -41,7 +37,11 @@ class FlowerClient(fl.client.NumPyClient):
             #************* * * *  *  *  *   *   *      *     *     *    *  *  *  *  * * *************
                 pass
             else:
-                pass            
+                pass
+            self.dataset = MLPWrapperData(params)
+
+        elif params.dataset == "LightningWrapperData":
+            self.dataset = LightningWrapperData(params)
         else:
             print("Dataset not available")
             exit()
