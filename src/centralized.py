@@ -7,7 +7,7 @@ from train import train
 from test import test
 from utils import Parameters
 from model_wrapper import ModelWrapper
-from dataloaders import MMsDataSet,LightningWrapperData
+from dataloaders import MMsDataSet,LightningWrapperData, MLPWrapperData
 
 params = Parameters()
 config_file = sys.argv[1]
@@ -20,8 +20,20 @@ else:
 
 model = ModelWrapper(params)
 model = model.to(device)
+print("FLOWERCLIENT::INIT::PARAMS_DATASET",params.dataset,params.local_model)
 if params.dataset == "MMs":
     dataset = MMsDataSet(params)
+elif params.local_model == "MLP":
+    if params.MLP_preprocess:
+    #************* * * *  *  *  *   *  Data preprocessing  *    *  *  *  *  * * *************
+    #     · · ·
+    #     · · ·
+    #     · · ·
+    #************* * * *  *  *  *   *   *      *     *     *    *  *  *  *  * * *************
+        pass
+    else:
+        pass
+    dataset = MLPWrapperData(params)
 elif params.dataset == "LightningWrapperData":
     dataset = LightningWrapperData(params)
 else:
