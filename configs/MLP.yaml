@@ -12,6 +12,8 @@ server_address : 161.116.4.119:4433
 federated : False
 use_certificates : False
 local_model : MLP
+configuration_file : /home/jorge/work_dir/nouman/AI4HF-OXF-Modelling/experiments/sample_config.json
+
 #Resnet152
 load_checkpoint : None
 task : Classification
