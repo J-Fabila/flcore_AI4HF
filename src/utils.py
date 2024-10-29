@@ -27,6 +27,7 @@ class Parameters:
             'federated' : None,
             'use_certificates' : None,
             'local_model': None,
+            'configuration_file' : None,
             'load_checkpoint': None,
             'task': None,
             'in_channels': None,
@@ -112,6 +113,7 @@ class Parameters:
         self.federated = self.params["federated"]
         self.use_certificates = self.params["use_certificates"]
         self.local_model = self.params["local_model"]
+        self.configuration_file = self.params["configuration_file"]
         self.load_checkpoint = self.params["load_checkpoint"]
         self.task = self.params["task"]
         self.num_labels = self.params["num_labels"]
