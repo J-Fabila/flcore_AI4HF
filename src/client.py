@@ -11,8 +11,12 @@ from collections import OrderedDict
 from train import train
 from test import test
 from utils import Parameters
-from model_wrapper import ModelWrapper
 
+from mlp_utils import load_json_config
+from data_mlp import process_imputed_data
+from Models.MLP.model import MLP_SODEN
+
+from model_wrapper import ModelWrapper
 from dataloaders import MMsDataSet,LightningWrapperData, MLPWrapperData
 
 class FlowerClient(fl.client.NumPyClient):
@@ -24,20 +28,47 @@ class FlowerClient(fl.client.NumPyClient):
         else:
             device = torch.device("cpu")
 
-        model = ModelWrapper(params)
-        self.model = model.to(device)
+        if params.local_model == "MLP":
+            configurations = [
+            {
+            'features': 'maggic', 'feature_size': 13, 'mlp_hidden_sizes': [16, 32, 16], 'mlp_output_size': 16, 
+            'ode_hidden_size': 16, 'ode_num_layers': 2, 'ode_batch_norm': False,'time_nums': 62
+            },
+            {
+            'features': 'maggic_plus', 'feature_size': 19, 'mlp_hidden_sizes': [32, 64, 32], 'mlp_output_size': 16, 
+            'ode_hidden_size': 16, 'ode_num_layers': 2, 'ode_batch_norm': False,'time_nums': 62
+            }
+            ]
+            config = configurations[0]
+            model_folder = '/home/jorge/work_dir/nouman/AI4HF-OXF-Modelling/new_models'
+            self.model_file = model_folder + "/maggic_model.pth" # o maggic_model.pth
+
+            model = MLP_SODEN(config)
+            self.model = model.to(device)
+
+            model.suffix = config['features']
+            optimizer = optim.Adam(model.parameters(), lr=1e-3)
+            scheduler = ReduceLROnPlateau(optimizer, mode='min', factor=0.1, patience=2, verbose=True)
+            
+            num_epochs = 2
+            patience = 2
+
+        else:
+            model = ModelWrapper(params)
+            self.model = model.to(device)
+
         if params.dataset == "MMs":
             self.dataset = MMsDataSet(params)
         elif params.local_model == "MLP":
             if params.MLP_preprocess:
             #************* * * *  *  *  *   *  Data preprocessing  *    *  *  *  *  * * *************
-            #     · · ·
-            #     · · ·
-            #     · · ·
+                configuration = load_json_config(params.configuration_file)
+                # Process imputed data
+                process_imputed_data(configuration)
             #************* * * *  *  *  *   *   *      *     *     *    *  *  *  *  * * *************
-                pass
             else:
                 pass
+
             self.dataset = MLPWrapperData(params)
 
         elif params.dataset == "LightningWrapperData":
@@ -48,31 +79,47 @@ class FlowerClient(fl.client.NumPyClient):
     
         self.dataset.setup("fit")
 
-
     def get_parameters(self, config): # config not needed at all
         print(f"[Client {self.params.client_id}] get_parameters")
-        return [val.cpu().numpy() for _, val in self.model.state_dict().items()]
+        if self.params.local_model == "MLP":
+            loc_model = torch.load(self.model_file)
+            return [val.cpu().numpy() for val in loc_model.values()]
+        else:
+            return [val.cpu().numpy() for _, val in self.model.state_dict().items()]
 
     def set_parameters(self, parameters:List[np.ndarray]):
-        self.model.train()
-        # Si esto del self.model.train no funciona porque no reconoce la
-        # función entonces deberías sustituírla por nuestra train:
-        # train(self.model,params)
-        params_dict = zip(self.model.state_dict().keys(), parameters)
-        state_dict = OrderedDict({k: torch.tensor(v) for k, v in params_dict})
-        self.model.load_state_dict(state_dict, strict=True)
-    
+        if self.params.local_model == "MLP":
+            # # fFalta sacar el model_keys de algun lado           
+            params_dict = zip(self.model_keys(), parameters)
+            state_dict = OrderedDict({k: torch.tensor(v) for k, v in params_dict})
+            # tenemos algo asi? quizas lo mas facil sea escribir un archivo pth y 
+            # cargar el archivo com model load
+            self.model.load_state_dict(state_dict, strict=True)
+        else:
+            self.model.train()
+            # Si esto del self.model.train no funciona porque no reconoce la
+            # función entonces deberías sustituírla por nuestra train:
+            # train(self.model,params)
+            params_dict = zip(self.model.state_dict().keys(), parameters)
+            state_dict = OrderedDict({k: torch.tensor(v) for k, v in params_dict})
+            self.model.load_state_dict(state_dict, strict=True)
+
     def fit(self, parameters, params):
-        print(" ***************************************** FIT self.params.client_id ", self.params)
-        print(f"[Client {self.params.client_id}] fit")
-        self.set_parameters(parameters)
-#************* * * *  *  *  *   *    *    *  *  *  *  * * *************
-        train(self.model,self.params,self.dataset)
-######## Aquí el train ya incluye su propio wandb. Pero podríamos loggear
-#        las losses o algo asi del proceso de entrenamiento
-        trainloader_dataset_len = self.dataset.train_size
-        return self.get_parameters(config={}), trainloader_dataset_len, {}
-#************* * * *  *  *  *   *    *    *  *  *  *  * * *************
+        if self.params.local_model == "MLP":
+            results = main_training_loop(model, train_filepath, test_filepath, model_path, optimizer, num_epochs, patience, scheduler, device)
+
+            pass
+        else:
+            print(" ***************************************** FIT self.params.client_id ", self.params)
+            print(f"[Client {self.params.client_id}] fit")
+            self.set_parameters(parameters)
+    #************* * * *  *  *  *   *    *    *  *  *  *  * * *************
+            train(self.model,self.params,self.dataset)
+    ######## Aquí el train ya incluye su propio wandb. Pero podríamos loggear
+    #        las losses o algo asi del proceso de entrenamiento
+            trainloader_dataset_len = self.dataset.train_size
+            return self.get_parameters(config={}), trainloader_dataset_len, {}
+    #************* * * *  *  *  *   *    *    *  *  *  *  * * *************
     """
     def evaluate(self, parameters, config):
         self.set_parameters(parameters)
@@ -84,22 +131,25 @@ class FlowerClient(fl.client.NumPyClient):
         return loss, 10000, {"loss": loss}
     """
     def evaluate(self, parameters, params):
-        # parameters es una lista y params un diccionario vacio
-        # En principio aqui aceptamos params, pero no depende de nosotros pasar params,
-        # flower pasa los parametros que le salen de los huevos
-        print(f"^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^[Client {self.params.client_id}] evaluate")
-        self.set_parameters(parameters)
-#************* * * *  *  *  *   *    *    *  *  *  *  * * *************
-        loss, accuracy = test(self.model, self.dataset)
-        # Aquí si que podríamos loggear pero sería para cada cliente individual
-#************* * * *  *  *  *   *    *    *  *  *  *  * * *************
-#        return float(loss), len(testloader_dataset_len), {"accuracy": float(accuracy)}
-#        return float(loss), 100, {"accuracy": float(accuracy)}
-        #print("************* * * *  *  *  *   *    *    *  *  *  *  * * *************")
-        #print("loss acc", loss, accuracy)
-        #print("************* * * *  *  *  *   *    *    *  *  *  *  * * *************")
-        return float(loss), self.dataset.test_size, {"accuracy": float(accuracy)}
-#        return float(loss), len(testloader_dataset_len), {"accuracy": float(accuracy), "loss": float(loss)}
+        if self.params.local_model == "MLP":
+            pass
+        else:
+            # parameters es una lista y params un diccionario vacio
+            # En principio aqui aceptamos params, pero no depende de nosotros pasar params,
+            # flower pasa los parametros que le salen de los huevos
+            print(f"^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^[Client {self.params.client_id}] evaluate")
+            self.set_parameters(parameters)
+    #************* * * *  *  *  *   *    *    *  *  *  *  * * *************
+            loss, accuracy = test(self.model, self.dataset)
+            # Aquí si que podríamos loggear pero sería para cada cliente individual
+    #************* * * *  *  *  *   *    *    *  *  *  *  * * *************
+    #        return float(loss), len(testloader_dataset_len), {"accuracy": float(accuracy)}
+    #        return float(loss), 100, {"accuracy": float(accuracy)}
+            #print("************* * * *  *  *  *   *    *    *  *  *  *  * * *************")
+            #print("loss acc", loss, accuracy)
+            #print("************* * * *  *  *  *   *    *    *  *  *  *  * * *************")
+            return float(loss), self.dataset.test_size, {"accuracy": float(accuracy)}
+    #        return float(loss), len(testloader_dataset_len), {"accuracy": float(accuracy), "loss": float(loss)}
 
 def main():
     ## OJO: aqui falta cambiar el len(dataset) en evaluate y fit
