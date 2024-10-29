@@ -25,9 +25,7 @@ class ModelWrapper(pl.LightningModule):
         self.task = params.task
         if self.params.local_model == "Basic":
             self.local_model = BasicConvolutional(params)
-        if self.params.local_model == "MLP":
-            self.local_model = MLP_SODEN(params.params, params.num_labels)
-        elif self.params.local_model == "UNet":
+        if self.params.local_model == "UNet":
             self.local_model = UNet(params)
         elif self.params.local_model == "Resnet18":
             self.local_model = resnet18(params)
@@ -50,14 +48,11 @@ class ModelWrapper(pl.LightningModule):
 
     def forward(self, image):
         print("MODEL_WRAPPER::FORWARD")
-        if self.local_model == "MLP":
-            #orward(self, inputs: Dict[str, torch.Tensor], label: torch.Tensor, full_eval: bool = False) -> Tuple[list, torch.Tensor]:
-            print("IMAGE",type(image))
-            inputs , label, full_eval = image[0], image[1], image[2]
-            return self.local_model.forward(inputs, label, full_eval)
-        else:
-            return  self.local_model(image)
-
+        #orward(self, inputs: Dict[str, torch.Tensor], label: torch.Tensor, full_eval: bool = False) -> Tuple[list, torch.Tensor]:
+        print("IMAGE",type(image))
+        inputs , label, full_eval = image[0], image[1], image[2]
+        return self.local_model.forward(inputs, label, full_eval)
+    
     def step(self, batch, stage):
         loss = 0.0
         images, target = batch["image"], batch[self.params.target_label]
@@ -82,175 +77,63 @@ class ModelWrapper(pl.LightningModule):
 
     def training_step(self, batch, batch_idx):
         print("MODEL_WRAPPER::TRAINING STEP")
-        if self.local_model == "MLP":
-            # ********** * * * * *  *  *   *    *    *   *  *  *  *  * * * * *********
-            #(model: torch.nn.Module, train_dataloader: DataLoader, optimizer: Optimizer, epoch: int) -> float:
-            """
-            Train the model for one epoch.
-
-            Args:
-                model (torch.nn.Module): The model to train.
-                train_dataloader (DataLoader): DataLoader for training data.
-                optimizer (Optimizer): The optimizer for model parameters.
-                epoch (int): The current epoch number.
-
-            Returns:
-                float: Average training loss for the epoch.
-            """
-            self.local_model.train()
-            #tr_loss = 0
-            #temp_loss = 0
-#            nb_tr_examples, nb_tr_steps = 0, 0
-            
-            #inputs = batch["batch"]
-            inputs = {"t":batch["t"],"init_cond":batch["init_cond"],"features":batch["features"],"index":batch["index"]}
-            label = batch["label"]
-            print("???????????????????????????????????????")
-            print("model_wrapper::train_step::batch_size",inputs.shape)
-            logits, loss = self.local_model(inputs, label)
-            #temp_loss += loss.item()
-            tr_loss = loss.item()
-            #nb_tr_examples += inputs['features'].size(0)
-            logs = {'train_loss': tr_loss}
-            self.log("train_loss", tr_loss,batch_size=self.params.batch_size) #,prog_bar=False, on_step=False)
-            return {'loss': loss, 'log': logs}
-            #return tr_loss #/ nb_tr_steps
-            # ********** * * * * *  *  *   *    *    *   *  *  *  *  * * * * *********
-        else:
-            loss = self.step(batch,"train")
-            logs = {'train_loss': loss}
-            self.log("train_loss", loss,batch_size=self.params.batch_size) #,prog_bar=False, on_step=False)
-            return {'loss': loss, 'log': logs}
+        loss = self.step(batch,"train")
+        logs = {'train_loss': loss}
+        self.log("train_loss", loss,batch_size=self.params.batch_size) #,prog_bar=False, on_step=False)
+        return {'loss': loss, 'log': logs}
 
     def validation_step(self, batch, batch_idx):
         print("MODEL_WRAPPER::VALIDATION_STEP")
         print("MLP ",self.params.local_model)
-        if self.params.local_model == "MLP":
-            print("MODEL_WRAPPER::LOCAL_MODEL::MLP")
-            # ********** * * * * *  *  *   *    *    *   *  *  *  *  * * * * *********
-            #validate_one_epoch(model: torch.nn.Module, valid_dataloader: DataLoader, end_timepoint: int = 12, return_ph: bool = False) -> Tuple[float, float, float] or Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
-            end_timepoint = 12 #: int = 12
-            return_ph = False  #: bool = False
-            #end_timepoint = self.params.end_timepoint
-            #return_ph = self.params.return_ph
+        loss = self.step( batch, "val")
+        images, target = batch["image"], batch[self.params.target_label]
+        outputs = self(images)
+        batch_size = batch["image"].shape[0]
+        if self.params.task == "Classification":
+            acc = 0.0
+            correct = 0
+            total = 0
+            _, predicted = torch.max(outputs.data, 1)
+            total += target.size(0)
+            correct += (predicted == target).sum().item()
+            acc = 100 * correct // total            
+            self.log_dict({"val_loss":loss,"acc": acc})
+            logs = {'val_loss': loss,'acc':acc}
+        elif (self.params.task == "Segmentation"):
+            _, _, d1 , d2 = target.shape
+            original_shape = (batch_size, d1,d2,self.params.n_classes)
+            flat = target.flatten()
+            encoded = torch.nn.functional.one_hot(flat.to(torch.int64),self.params.n_classes)
+            target = encoded.view(original_shape)
+            target_prob = target.permute(0, 3, 1, 2).to(int)
+            ################################################################
+            outputs_prob = torch.sigmoid(outputs)
+            dice_ = self.dice(outputs_prob,target_prob)
+            ################################################################
+            _, predi = torch.max(outputs_prob, 1)
+            _, outsi = torch.max(target_prob,1)
             
-            """
-            Validate the model for one epoch.
+            encoded = torch.nn.functional.one_hot(predi.flatten().to(torch.int64),self.params.n_classes)
+            output = encoded.view(original_shape)
+            outputs_prob = output.permute(0, 3, 1, 2).to(int)
 
-            Args:
-                model (torch.nn.Module): The model to validate.
-                valid_dataloader (DataLoader): DataLoader for validation data.
-                end_timepoint (int, optional): The end timepoint for evaluation. Defaults to 12.
-                return_ph (bool, optional): Whether to return partial hazards. Defaults to False.
-
-            Returns:
-                If return_ph is False:
-                    Tuple[float, float, float]: Precision, AUROC, and average loss.
-                If return_ph is True:
-                    Tuple[torch.Tensor, torch.Tensor, torch.Tensor]: Labels, hazard sequences, and times.
-            """
-            self.local_model.eval()
-            ####################################################
-            y_label, y, hazard_seqs, y_time = [], [], [], []
-            ######################## Resulta un poco innecesario
-            loss_temp = 0
-            counter = 0
-
-            #inputs = batch["batch"]
-            inputs = {"t":batch["t"],"init_cond":batch["init_cond"],"features":batch["features"],"index":batch["index"]}
-
-            label = batch["label"]
-            print("MODEL_WRAPPER::VAL STEP::FORWARD EMPIEZA")
-            print("::::::::::::::: inputs",inputs.keys())
-            print(inputs["t"].shape)
-            print(inputs["init_cond"].shape)
-            print(inputs["features"].shape)
-            print(inputs["index"].shape)
-            with torch.no_grad():
-                logits, loss = self.local_model(inputs, label)
-            time2event = inputs['t']
-
-            print("MODEL_WRAPPER::VAL STEP::FORWARD::TERMINA")
-            ####################################################
-            y_label.append(label)
-            y.append(logits[0])
-            hazard_seqs.append(logits[1])
-            y_time.append(time2event)
-            loss_temp += loss.item()
-            print(" Y LABEL NO SE QUE")
-            y_label = torch.cat(y_label, dim=0)
-            y = torch.cat(y, dim=0)
-            y_time = torch.cat(y_time, dim=0)
-            hazard_seqs = torch.cat(hazard_seqs, dim=0)
-            ####################################################
-            print("PRECISION TEST")
-            tempprc, _, _ = precision_test(hazard_seqs[:, end_timepoint], y_label)
-            print(" CINDEX")
-            tempauroc = cindex(hazard_seqs[:, end_timepoint], y_label, y_time)
-            print("INICA EL RETURN")
-            if not return_ph:
-                print("NOT RETURN PH")
-                #return tempprc, tempauroc, loss_temp  #/ counter
-                logs = {'val_temp': loss_temp,"tempauroc":tempauroc,"tempprc":tempprc}
-                self.log_dict({"val_temp":loss_temp,"tempauroc":tempauroc,"hausdorff":tempprc})
-            else:
-                print("ELSE")
-                #return y_label, hazard_seqs, y_time
-                logs = {'y_label': y_label,"hazard_seqs":hazard_seqs,"y_time":y_time}
-                self.log_dict({"y_label":y_label,"hazard_seqs":hazard_seqs,"y_time":y_time})
+            hausdorff = 0.0
+            for clase in range(self.params.n_classes):
+                #print("CLASE ", clase, target_prob[:,clase,:,:].max() , outputs_prob[:,clase,:,:].max())
+                #print(" TARGETS PROB", target_prob[0,:,0,0])
+                #print(" DIMENSIONES outputs prob", outputs_prob[0,:,0,0])
             
-            return {"loss" : loss, 'log' : logs}
-            # ********** * * * * *  *  *   *    *    *   *  *  *  *  * * * * *********
-        else:
-            loss = self.step( batch, "val")
-            images, target = batch["image"], batch[self.params.target_label]
-            outputs = self(images)
-            batch_size = batch["image"].shape[0]
-            if self.params.task == "Classification":
-                acc = 0.0
-                correct = 0
-                total = 0
-                _, predicted = torch.max(outputs.data, 1)
-                total += target.size(0)
-                correct += (predicted == target).sum().item()
-                acc = 100 * correct // total            
-                self.log_dict({"val_loss":loss,"acc": acc})
-                logs = {'val_loss': loss,'acc':acc}
-            elif (self.params.task == "Segmentation"):
-                _, _, d1 , d2 = target.shape
-                original_shape = (batch_size, d1,d2,self.params.n_classes)
-                flat = target.flatten()
-                encoded = torch.nn.functional.one_hot(flat.to(torch.int64),self.params.n_classes)
-                target = encoded.view(original_shape)
-                target_prob = target.permute(0, 3, 1, 2).to(int)
-                ################################################################
-                outputs_prob = torch.sigmoid(outputs)
-                dice_ = self.dice(outputs_prob,target_prob)
-                ################################################################
-                _, predi = torch.max(outputs_prob, 1)
-                _, outsi = torch.max(target_prob,1)
-                
-                encoded = torch.nn.functional.one_hot(predi.flatten().to(torch.int64),self.params.n_classes)
-                output = encoded.view(original_shape)
-                outputs_prob = output.permute(0, 3, 1, 2).to(int)
-    
-                hausdorff = 0.0
-                for clase in range(self.params.n_classes):
-                    #print("CLASE ", clase, target_prob[:,clase,:,:].max() , outputs_prob[:,clase,:,:].max())
-                    #print(" TARGETS PROB", target_prob[0,:,0,0])
-                    #print(" DIMENSIONES outputs prob", outputs_prob[0,:,0,0])
-                
-                    if target_prob[:,clase,:,:].max() == 0:
-                        target_prob[0,clase,0,0] = 1   
-                    if outputs_prob[:,clase,:,:].max() == 0:
-                        outputs_prob[0,clase,0,0] = 1    
-                    hausdorff += hd(outputs_prob[:,clase,:,:].cpu().numpy(),target_prob[:,clase,:,:].cpu().numpy())
-                    print("HAUSDORFF ",clase, hausdorff)
-                hausdorff = hausdorff/self.params.n_classes
-                print("HAUSDORFF ", hausdorff)
-                logs = {'val_loss': loss,"dice":dice_,"hausdorff":hausdorff}
-                self.log_dict({"val_loss":loss,"dice":dice_,"hausdorff":hausdorff})
-            return {"loss" : loss, 'log' : logs}
+                if target_prob[:,clase,:,:].max() == 0:
+                    target_prob[0,clase,0,0] = 1   
+                if outputs_prob[:,clase,:,:].max() == 0:
+                    outputs_prob[0,clase,0,0] = 1    
+                hausdorff += hd(outputs_prob[:,clase,:,:].cpu().numpy(),target_prob[:,clase,:,:].cpu().numpy())
+                print("HAUSDORFF ",clase, hausdorff)
+            hausdorff = hausdorff/self.params.n_classes
+            print("HAUSDORFF ", hausdorff)
+            logs = {'val_loss': loss,"dice":dice_,"hausdorff":hausdorff}
+            self.log_dict({"val_loss":loss,"dice":dice_,"hausdorff":hausdorff})
+        return {"loss" : loss, 'log' : logs}
 
     def test_step(self, batch, batch_idx):
         loss = self.step( batch, "test")
