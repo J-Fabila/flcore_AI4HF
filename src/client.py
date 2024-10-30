@@ -1,3 +1,4 @@
+import os
 import sys
 import torch
 import flwr as fl
@@ -8,6 +9,9 @@ from pathlib import Path
 
 from collections import OrderedDict
 
+from torch.optim.lr_scheduler import ReduceLROnPlateau
+import torch.optim as optim
+
 from train import train
 from test import test
 from utils import Parameters
@@ -15,6 +19,7 @@ from utils import Parameters
 from mlp_utils import load_json_config
 from data_mlp import process_imputed_data
 from Models.MLP.model import MLP_SODEN
+from mlp_trainer import main_training_loop
 
 from model_wrapper import ModelWrapper
 from dataloaders import MMsDataSet,LightningWrapperData, MLPWrapperData
@@ -22,12 +27,12 @@ from dataloaders import MMsDataSet,LightningWrapperData, MLPWrapperData
 class FlowerClient(fl.client.NumPyClient):
     def __init__(self, params):
         self.params = params
-
+        print(" FLOWER CLIENT INIT")
         if torch.cuda.is_available() and params.device == 'cuda':
             device = torch.device('cuda')
         else:
             device = torch.device("cpu")
-
+        self.device = device
         if params.local_model == "MLP":
             configurations = [
             {
@@ -39,45 +44,53 @@ class FlowerClient(fl.client.NumPyClient):
             'ode_hidden_size': 16, 'ode_num_layers': 2, 'ode_batch_norm': False,'time_nums': 62
             }
             ]
-            config = configurations[0]
-            model_folder = '/home/jorge/work_dir/nouman/AI4HF-OXF-Modelling/new_models'
-            self.model_file = model_folder + "/maggic_model.pth" # o maggic_model.pth
 
-            model = MLP_SODEN(config)
+            if params.features == "maggic":
+                config_selector = 0
+            elif params.features == "maggic_plus":
+                config_selector = 1
+
+            self.config = configurations[config_selector]
+
+            self.model_folder = '/home/jorge/work_dir/nouman/AI4HF-OXF-Modelling/new_models'
+            self.model_file = os.path.join(self.model_folder, f"{self.config['features']}_model.pth")
+
+            model = MLP_SODEN(self.config)
             self.model = model.to(device)
 
-            model.suffix = config['features']
-            optimizer = optim.Adam(model.parameters(), lr=1e-3)
-            scheduler = ReduceLROnPlateau(optimizer, mode='min', factor=0.1, patience=2, verbose=True)
-            
-            num_epochs = 2
-            patience = 2
+            model.suffix = self.config['features']
+            self.optimizer = optim.Adam(model.parameters(), lr=1e-3)
+            self.scheduler = ReduceLROnPlateau(self.optimizer, mode='min', factor=0.1, patience=self.params.lr_patience, verbose=True)
 
         else:
             model = ModelWrapper(params)
             self.model = model.to(device)
 
-        if params.dataset == "MMs":
-            self.dataset = MMsDataSet(params)
-        elif params.local_model == "MLP":
+        if params.local_model == "MLP":
             if params.MLP_preprocess:
             #************* * * *  *  *  *   *  Data preprocessing  *    *  *  *  *  * * *************
+                print(" CORRIENDO EL PREPROCESSING")
                 configuration = load_json_config(params.configuration_file)
                 # Process imputed data
                 process_imputed_data(configuration)
+                print("TERMINANDO PREPROCESING")
             #************* * * *  *  *  *   *   *      *     *     *    *  *  *  *  * * *************
             else:
                 pass
 
-            self.dataset = MLPWrapperData(params)
-
-        elif params.dataset == "LightningWrapperData":
-            self.dataset = LightningWrapperData(params)
         else:
-            print("Dataset not available")
-            exit()
-    
-        self.dataset.setup("fit")
+            if params.dataset == "MMs":
+                self.dataset = MMsDataSet(params)
+                
+                self.dataset = MLPWrapperData(params)
+
+            elif params.dataset == "LightningWrapperData":
+                self.dataset = LightningWrapperData(params)
+            else:
+                print("Dataset not available")
+                exit()
+            print("CLIENT::FLOWER CLIENT")    
+            self.dataset.setup("fit")
 
     def get_parameters(self, config): # config not needed at all
         print(f"[Client {self.params.client_id}] get_parameters")
@@ -88,6 +101,7 @@ class FlowerClient(fl.client.NumPyClient):
             return [val.cpu().numpy() for _, val in self.model.state_dict().items()]
 
     def set_parameters(self, parameters:List[np.ndarray]):
+        print(f"[Client {self.params.client_id}] set_parameters")
         if self.params.local_model == "MLP":
             # # fFalta sacar el model_keys de algun lado           
             params_dict = zip(self.model_keys(), parameters)
@@ -106,9 +120,16 @@ class FlowerClient(fl.client.NumPyClient):
 
     def fit(self, parameters, params):
         if self.params.local_model == "MLP":
-            results = main_training_loop(model, train_filepath, test_filepath, model_path, optimizer, num_epochs, patience, scheduler, device)
+            print("PUNTO DE REVISION ")
+            train_filepath = os.path.join(self.params.data_folder, f"train_{self.config['features']}.pt")
+            test_filepath = os.path.join(self.params.data_folder, f"valid_{self.config['features']}.pt")
+            model_path = self.model_folder # el directorio de log de los params
 
-            pass
+            results = main_training_loop(self.model, train_filepath, test_filepath,
+                                    model_path, self.optimizer, self.params.epochs,
+                                   self.params.lr_patience, self.scheduler, self.device)
+            trainloader_dataset_len = 1.0 #self.dataset.train_size                       
+            return self.get_parameters(config={}), trainloader_dataset_len, {}
         else:
             print(" ***************************************** FIT self.params.client_id ", self.params)
             print(f"[Client {self.params.client_id}] fit")
