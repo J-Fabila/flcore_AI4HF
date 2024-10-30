@@ -27,6 +27,7 @@ class Parameters:
             'federated' : None,
             'use_certificates' : None,
             'local_model': None,
+            'features': None,
             'configuration_file' : None,
             'load_checkpoint': None,
             'task': None,
@@ -69,6 +70,7 @@ class Parameters:
             # Data set variables
             'dataset': None,
             'dataset_root': None,
+            'data_folder': None,
             'train_filepath': None,
             'test_filepath': None,
             'target_label': None,
@@ -113,6 +115,7 @@ class Parameters:
         self.federated = self.params["federated"]
         self.use_certificates = self.params["use_certificates"]
         self.local_model = self.params["local_model"]
+        self.features = self.params["features"]
         self.configuration_file = self.params["configuration_file"]
         self.load_checkpoint = self.params["load_checkpoint"]
         self.task = self.params["task"]
@@ -155,6 +158,7 @@ class Parameters:
         # Data set variables
         self.dataset = self.params["dataset"]
         self.dataset_root = self.params["dataset_root"]
+        self.data_folder = self.params["data_folder"]
         self.train_filepath = self.params["train_filepath"]
         self.test_filepath = self.params["test_filepath"]
         self.target_label = self.params["target_label"]
