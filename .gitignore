@@ -9,3 +9,5 @@ src/Models/__pycache__/*
 src/Models/MLP/__pycache__/*
 src/Models/MLP/.ipynb_checkpoints/*
 src/.ipynb_checkpoints/*
+
+wandb/*
