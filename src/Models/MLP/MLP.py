@@ -26,7 +26,10 @@ def make_net(input_size: int, hidden_size: int, num_layers: int, output_size: in
     def layer_block(in_size: int, out_size: int) -> list:
         """Create a block of layers for the network."""
         layers = [nn.Linear(in_size, out_size), act_fn()]
-        if batch_norm:
+        print("MLP::MAKENET::BATCH_NORM=",batch_norm)
+        print("================MLP::MAKENET::BATCHNORM::OUTSIZE=",batch_norm,type(batch_norm))
+        if batch_norm == "False":
+            print("**********MLP::MAKENET::BATCHNORM::OUTSIZE=",type(batch_norm))
             layers.append(nn.BatchNorm1d(out_size))
         if dropout > 0:
             layers.append(nn.Dropout(p=dropout))
@@ -101,6 +104,7 @@ class ContextRecMLPODEFunc(BaseSurvODEFunc):
                             batch_norm=self.batch_norm).to(self.device)
 
     def forward(self, t: torch.Tensor, y: torch.Tensor) -> torch.Tensor:
+        #print("ContextRECMLPODEF::FORWARD")
         """
         Forward pass of the ODE function.
 
@@ -119,6 +123,11 @@ class ContextRecMLPODEFunc(BaseSurvODEFunc):
         inp = torch.cat([Lambda_t, t.repeat(T.size()) * T, x.view(-1, self.feature_size)], dim=1).to(self.device)
         output = self.net(inp) * T
         zeros = torch.zeros_like(y.index_select(-1, torch.tensor(range(1, y.size(-1))).to(self.device))).to(self.device)
+        #print("SAHPES zeros output",zeros.shape,output.shape)
+        #if len(zeros.shape) == 1:
+        #    zeros=zeros.unsqueeze(0)
+        #    print("CORRE")
+        #print("SAHPES zeros output",zeros.shape,output.shape)
         output = torch.cat([output, zeros], dim=1).to(self.device)
         
         return output if self.batch_time_mode else output.squeeze(0)
@@ -171,7 +180,7 @@ class NonCoxFuncModel(nn.Module):
         outputs["Lambda"] = odeint(self.odefunc, init_cond, t, rtol=1e-4, atol=1e-8)[1:].squeeze()
         self.odefunc.set_batch_time_mode(True)
         outputs["lambda"] = self.odefunc(t[1:], outputs["Lambda"]).squeeze()
-
+        #print("OUTPUTS",outputs["lambda"].shape)
         outputs["Lambda"] = outputs["Lambda"][:, 0]
         outputs["lambda"] = outputs["lambda"][:, 0] / orig_t
 
@@ -257,8 +266,10 @@ class MLP_Model(nn.Module):
         layers.append(nn.Linear(input_size, config["mlp_output_size"]))
         self.mlp = nn.Sequential(*layers)
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-        
+        print("MLP::INIT::TERMINA")
+
     def forward(self, inputs: Dict[str, torch.Tensor]) -> torch.Tensor:
+        print("MLP::FORWARD::PASO PALANTE")
         """
         Forward pass of the MLP model.
 
@@ -269,7 +280,10 @@ class MLP_Model(nn.Module):
             torch.Tensor: MLP output.
         """
         features = inputs['features'].to(self.device)
-        return self.mlp(features)
+        print("features", type(features), features.shape)
+        salida = self.mlp(features)
+        print("MLP::FORWARD::SALIDA")
+        return  salida
 
 class MLP_SODEN(nn.Module):
     """MLP-based Survival ODE Network."""
@@ -298,12 +312,15 @@ class MLP_SODEN(nn.Module):
         Returns:
             Tuple[list, torch.Tensor]: Output log and loss.
         """
+        print("MLP_SODEM::FORWARD::MLP output")
         mlp_output = self.mlp(inputs)
+        print("MLP_SODEM::FORWARD::MLP output::classifier")
         logits = self.classifier(inputs, mlp_output, full_eval)
-
+        print("MLP_SODEM::FORWARD::MLP output::SurvODELOSS")
         loss_fct = SurvODELoss(reduction='mean')
+        print("MLP_SODEM::FORWARD::MLP output::outlog")
         outlog = [logits['lambda'], logits['lambda']]
         if not self.training:
             outlog = [logits['lambda'], logits['hazard_seq']]
-        
+        print("MLP_SODEM::FORWARD::MLP output::TERMINA")
         return outlog, loss_fct(logits, label.view(-1))
