@@ -22,12 +22,11 @@ from Models.MLP.model import MLP_SODEN
 from mlp_trainer import main_training_loop
 
 from model_wrapper import ModelWrapper
-from dataloaders import MMsDataSet,LightningWrapperData, MLPWrapperData
+from dataloaders import MMsDataSet,LightningWrapperData  
 
 class FlowerClient(fl.client.NumPyClient):
     def __init__(self, params):
         self.params = params
-        print(" FLOWER CLIENT INIT")
         if torch.cuda.is_available() and params.device == 'cuda':
             device = torch.device('cuda')
         else:
@@ -69,11 +68,9 @@ class FlowerClient(fl.client.NumPyClient):
         if params.local_model == "MLP":
             if params.MLP_preprocess:
             #************* * * *  *  *  *   *  Data preprocessing  *    *  *  *  *  * * *************
-                print(" CORRIENDO EL PREPROCESSING")
                 configuration = load_json_config(params.configuration_file)
                 # Process imputed data
                 process_imputed_data(configuration)
-                print("TERMINANDO PREPROCESING")
             #************* * * *  *  *  *   *   *      *     *     *    *  *  *  *  * * *************
             else:
                 pass
@@ -120,7 +117,6 @@ class FlowerClient(fl.client.NumPyClient):
 
     def fit(self, parameters, params):
         if self.params.local_model == "MLP":
-            print("PUNTO DE REVISION ")
             train_filepath = os.path.join(self.params.data_folder, f"train_{self.config['features']}.pt")
             test_filepath = os.path.join(self.params.data_folder, f"valid_{self.config['features']}.pt")
             model_path = self.model_folder # el directorio de log de los params
