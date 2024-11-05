@@ -13,8 +13,8 @@ from torch.optim.lr_scheduler import CosineAnnealingWarmRestarts
 from Models.BasicConvolutional import BasicConvolutional
 from Models.UNet import UNet
 from Models.ResNet import *
-from Models.MLP.MLP import MLP_SODEN
-from Models.MLP.metrics import precision_test, cindex 
+#from Models.MLP.MLP import MLP_SODEN
+#from Models.MLP.metrics import precision_test, cindex 
 
 from binary import hd95, hd, assd, jc
 
@@ -47,9 +47,7 @@ class ModelWrapper(pl.LightningModule):
         self.save_hyperparameters(self.params.params)
 
     def forward(self, image):
-        print("MODEL_WRAPPER::FORWARD")
         #orward(self, inputs: Dict[str, torch.Tensor], label: torch.Tensor, full_eval: bool = False) -> Tuple[list, torch.Tensor]:
-        print("IMAGE",type(image))
         inputs , label, full_eval = image[0], image[1], image[2]
         return self.local_model.forward(inputs, label, full_eval)
     
@@ -76,15 +74,12 @@ class ModelWrapper(pl.LightningModule):
         return loss.to(dtype = torch.float32)
 
     def training_step(self, batch, batch_idx):
-        print("MODEL_WRAPPER::TRAINING STEP")
         loss = self.step(batch,"train")
         logs = {'train_loss': loss}
         self.log("train_loss", loss,batch_size=self.params.batch_size) #,prog_bar=False, on_step=False)
         return {'loss': loss, 'log': logs}
 
     def validation_step(self, batch, batch_idx):
-        print("MODEL_WRAPPER::VALIDATION_STEP")
-        print("MLP ",self.params.local_model)
         loss = self.step( batch, "val")
         images, target = batch["image"], batch[self.params.target_label]
         outputs = self(images)
