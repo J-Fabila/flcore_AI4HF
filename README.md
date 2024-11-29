@@ -10,7 +10,7 @@ To set up and run the project, follow the steps below:
 2. **Install Dependencies with pip**  
    Run the following command to install the required libraries:
    ```bash
-   pip install wandb rich tqdm flwr pytorch-lightning
+   pip install wandb rich tqdm flwr pytorch-lightning scikit-learn torchdiffeq lifelines pyarrow
    ```
 
 3. **Install PyTorch**  
