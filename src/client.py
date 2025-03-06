@@ -162,7 +162,7 @@ class FlowerClient(fl.client.NumPyClient):
     """
     def evaluate(self, parameters, params):
         if self.params.local_model == "MLP":
-            return 0.0, 1, {}
+            return 0.0, 1, {"accuracy":0.0}
         else:
             # parameters es una lista y params un diccionario vacio
             # En principio aqui aceptamos params, pero no depende de nosotros pasar params,
