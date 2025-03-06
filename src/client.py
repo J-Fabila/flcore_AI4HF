@@ -26,6 +26,7 @@ from dataloaders import MMsDataSet,LightningWrapperData
 
 class FlowerClient(fl.client.NumPyClient):
     def __init__(self, params):
+        print("INICIA")
         self.params = params
         if torch.cuda.is_available() and params.device == 'cuda':
             device = torch.device('cuda')
@@ -43,21 +44,28 @@ class FlowerClient(fl.client.NumPyClient):
             'ode_hidden_size': 16, 'ode_num_layers': 2, 'ode_batch_norm': False,'time_nums': 62
             }
             ]
-
+            print("LEYO PARAMETROS")
             if params.features == "maggic":
                 config_selector = 0
             elif params.features == "maggic_plus":
                 config_selector = 1
-
+            print("CONFIG SELECTOR", config_selector)
             self.config = configurations[config_selector]
-
-            self.model_folder = '/home/jorge/work_dir/nouman/AI4HF-OXF-Modelling/new_models'
+            #Aqui primer problema: esto no debería estar alambrado
+            #self.model_folder = '/home/jorge/work_dir/nouman/AI4HF-OXF-Modelling/new_models'
+            # o sería mejor ponerlo como variable
+            self.model_folder = 'data'
             self.model_file = os.path.join(self.model_folder, f"{self.config['features']}_model.pth")
 
             model = MLP_SODEN(self.config)
+            model.suffix = self.config['features']
+
+# ==================================================================================
+            torch.save(model.state_dict(), f'{self.model_folder}/{model.suffix}_model.pth')
+# ==================================================================================
             self.model = model.to(device)
 
-            model.suffix = self.config['features']
+#            model.suffix = self.config['features']
             self.optimizer = optim.Adam(model.parameters(), lr=1e-3)
             self.scheduler = ReduceLROnPlateau(self.optimizer, mode='min', factor=0.1, patience=self.params.lr_patience, verbose=True)
 
@@ -79,7 +87,7 @@ class FlowerClient(fl.client.NumPyClient):
             if params.dataset == "MMs":
                 self.dataset = MMsDataSet(params)
                 
-                self.dataset = MLPWrapperData(params)
+                #self.dataset = MLPWrapperData(params)
 
             elif params.dataset == "LightningWrapperData":
                 self.dataset = LightningWrapperData(params)
@@ -93,7 +101,9 @@ class FlowerClient(fl.client.NumPyClient):
         print(f"[Client {self.params.client_id}] get_parameters")
         if self.params.local_model == "MLP":
             loc_model = torch.load(self.model_file)
-            return [val.cpu().numpy() for val in loc_model.values()]
+            print("regresa valores")
+            #print([val.cpu().numpy() for  val in loc_model.values()])
+            return [val.cpu().numpy() for  val in loc_model.values()]
         else:
             return [val.cpu().numpy() for _, val in self.model.state_dict().items()]
 
@@ -105,6 +115,7 @@ class FlowerClient(fl.client.NumPyClient):
             state_dict = OrderedDict({k: torch.tensor(v) for k, v in params_dict})
             # tenemos algo asi? quizas lo mas facil sea escribir un archivo pth y 
             # cargar el archivo com model load
+            print("SET PARAMETERS::LOAD STATE DICT")
             self.model.load_state_dict(state_dict, strict=True)
         else:
             self.model.train()
@@ -117,15 +128,17 @@ class FlowerClient(fl.client.NumPyClient):
 
     def fit(self, parameters, params):
         if self.params.local_model == "MLP":
+            print("FIT :: ENTRA MLP self local model ")
             train_filepath = os.path.join(self.params.data_folder, f"train_{self.config['features']}.pt")
             test_filepath = os.path.join(self.params.data_folder, f"valid_{self.config['features']}.pt")
             model_path = self.model_folder # el directorio de log de los params
-
+            print("INICIA MAIN TRAIING LOOP")
             results = main_training_loop(self.model, train_filepath, test_filepath,
                                     model_path, self.optimizer, self.params.epochs,
                                    self.params.lr_patience, self.scheduler, self.device)
-            trainloader_dataset_len = 1.0 #self.dataset.train_size                       
-            return self.get_parameters(config={}), trainloader_dataset_len, {}
+            trainloader_dataset_len = 1.0 #self.dataset.train_size
+            #print("FIT :: PREVIO A REGRESAR PARAMS",self.get_parameters(config={}),trainloader_dataset_len)                
+            return self.get_parameters(config={}), int(trainloader_dataset_len), {}
         else:
             print(" ***************************************** FIT self.params.client_id ", self.params)
             print(f"[Client {self.params.client_id}] fit")
@@ -149,7 +162,7 @@ class FlowerClient(fl.client.NumPyClient):
     """
     def evaluate(self, parameters, params):
         if self.params.local_model == "MLP":
-            pass
+            return 0.0, 1, {}
         else:
             # parameters es una lista y params un diccionario vacio
             # En principio aqui aceptamos params, pero no depende de nosotros pasar params,
