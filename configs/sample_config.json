@@ -1,0 +1,43 @@
+{
+    "file_path": "./data/random_data.parquet",
+    "data_folder": "./data",
+    "model_folder": "./../models",
+    "fields":  {
+        "patid": "Patient ID - Unique identifier for each patient",
+        "pracid": "Practice ID - Identifier for the medical practice",
+        "gender": "Patient's gender",
+        "label": "Outcome label or classification",
+        "time2event": "Time to the event of interest",
+        "age": "Patient's age",
+        "bmi": "Body Mass Index - A measure of body fat based on height and weight",
+        "smoke": "Smoking status",
+        "systolic": "Systolic blood pressure - The higher number in a blood pressure reading",
+        "creatinine": "Creatinine level - A measure of kidney function",
+        "bb": "Beta-blocker medication usage",
+        "acei_arb": "ACE inhibitor or ARB medication usage",
+        "diab": "Diabetes status",
+        "copd": "Chronic Obstructive Pulmonary Disease status",
+        "EF": "Ejection Fraction - A measurement of heart function",
+        "sodium": "Sodium level in the blood",
+        "nyha": "New York Heart Association classification - A measure of heart failure severity",
+        "hftime": "Have 18 months passed since the heart failure diagnosis time",
+        "af": "Atrial Fibrillation status",
+        "stroke": "History of stroke",
+        "mi": "Myocardial Infarction (heart attack) history",
+        "PCI": "Percutaneous Coronary Intervention history",
+        "CABG": "Coronary Artery Bypass Grafting history"
+    },
+    "field_mapping": {
+        "patid": "patid", "pracid": "pracid", "gender": "gender", "label": "label", "time2event": "time2event", 
+        "age": "age", "bmi": "bmi", "smoke": "smoke", "systolic": "systolic", "creatinine": "creatinine", 
+        "bb": "bb", "acei_arb": "acei_arb", "diab": "diab", "copd": "copd", "EF": "EF", "sodium": "sodium", 
+        "nyha": "nyha", "hftime": "hftime", "af": "af", "stroke": "stroke", "mi": "mi", "PCI": "PCI", "CABG": "CABG"
+    },
+    "categorical_columns": ["gender", "smoke", "bb", "acei_arb", "diab", "copd", "nyha", "hftime", "af", "stroke", "mi", "PCI", "CABG"],
+  "int_columns": ["gender", "age", "label", "time2event", "smoke", "bb", "acei_arb", "diab", "copd", "nyha", "hftime", "af", "stroke", "mi", "PCI", "CABG"],
+  "float_columns": ["bmi", "systolic", "creatinine", "sodium", "EF"],
+  "selected_columns": ["patid", "pracid", "gender", "age", "label", "time2event", "bmi", "smoke", "systolic", "creatinine", "bb", "acei_arb", "diab", "copd", "EF", "sodium", "nyha", "hftime", "af", "stroke", "mi", "PCI", "CABG"],
+  "maggic_columns": ["gender", "age", "smoke", "hftime", "systolic", "creatinine", "bmi", "nyha", "EF", "copd", "diab", "bb", "acei_arb"],
+  "maggic_plus_columns": ["gender", "age", "smoke", "hftime", "systolic", "creatinine", "bmi", "nyha", "EF", "copd", "diab", "bb", "acei_arb", "sodium", "af", "mi", "stroke", "PCI", "CABG"],
+  "label_columns": ["time2event", "label"]
+}
