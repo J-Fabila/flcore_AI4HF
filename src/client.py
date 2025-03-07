@@ -54,9 +54,9 @@ class FlowerClient(fl.client.NumPyClient):
             #Aqui primer problema: esto no debería estar alambrado
             #self.model_folder = '/home/jorge/work_dir/nouman/AI4HF-OXF-Modelling/new_models'
             # o sería mejor ponerlo como variable
-            self.model_folder = 'data'
+            self.model_folder = params.log_path #'data'
+            os.makedirs(self.model_folder, exist_ok=True)  # Crea el directorio si no existe
             self.model_file = os.path.join(self.model_folder, f"{self.config['features']}_model.pth")
-
             model = MLP_SODEN(self.config)
             model.suffix = self.config['features']
 
@@ -133,6 +133,9 @@ class FlowerClient(fl.client.NumPyClient):
             test_filepath = os.path.join(self.params.data_folder, f"valid_{self.config['features']}.pt")
             model_path = self.model_folder # el directorio de log de los params
             print("INICIA MAIN TRAIING LOOP")
+            # Idea: self.results # asi almacenamos los results que son:
+            # main_training_loop :: return tempprc, tempauroc, test_loss, model
+            # así imprimimos los valores en  la línea 168
             results = main_training_loop(self.model, train_filepath, test_filepath,
                                     model_path, self.optimizer, self.params.epochs,
                                    self.params.lr_patience, self.scheduler, self.device)
@@ -163,6 +166,9 @@ class FlowerClient(fl.client.NumPyClient):
     def evaluate(self, parameters, params):
         if self.params.local_model == "MLP":
             return 0.0, 1, {"accuracy":0.0}
+#           OJO que tendrías que cambiar las variables en el server: linea 14 en la definicion del weighted avarage
+#           tendrias que adaptar la funcion
+#            return 0.0, 1, {"tempprc":self.results[0], "tempauroc":}
         else:
             # parameters es una lista y params un diccionario vacio
             # En principio aqui aceptamos params, pero no depende de nosotros pasar params,
