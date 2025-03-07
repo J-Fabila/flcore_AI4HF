@@ -14,7 +14,7 @@ federated : True
 use_certificates : False
 local_model : MLP
 features : maggic
-configuration_file : /home/jorge/work_dir/nouman/AI4HF-OXF-Modelling/experiments/sample_config.json
+configuration_file : configs/sample_config.json
 
 #Resnet152
 load_checkpoint : None
@@ -56,11 +56,8 @@ clip : 1.0
 early_stopping_patience : 10
 
 # Data set variables
-dataset_root : None
-data_folder : /home/jorge/work_dir/federado/flcore_AI4HF/data/
-target_label : Plane
+data_folder : data/
 n_channels : 1
-#data/CIFAR/cifar_1.pt
 
 # Logging variables
 log_path : mlp_test
