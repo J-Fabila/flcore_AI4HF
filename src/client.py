@@ -212,10 +212,9 @@ def main():
     if params.use_certificates == True or params.use_certificates == "True":
         fl.client.start_client(
              server_address=params.server_address,
-             root_certificates=Path("./src/certificates/rootCA_cert.pem").read_bytes(),
-#(
-#             Path("./src/certificates/rootCA_cert.pem").read_bytes(),
-#             Path("./src/certificates/rootCA_key.pem").read_bytes() ),
+             root_certificates=( Path("./src/certificates/rootCA_cert.pem").read_bytes(),
+             Path("./src/certificates/rootCA_cert.pem").read_bytes(),
+             Path("./src/certificates/rootCA_key.pem").read_bytes() ),
              client=client)
     else:
         fl.client.start_client(
@@ -228,3 +227,27 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+"""
+
+# Cargar el certificado raíz
+root_cert = Path("./src/certificates/rootCA_cert.pem").read_bytes()
+
+# Crear las credenciales de seguridad TLS (solo necesitamos el certificado raíz)
+ssl_credentials = grpc.ssl_channel_credentials(root_cert)
+
+# Iniciar el cliente con TLS habilitado
+fl.client.start_client(
+    server_address=params.server_address,  # Dirección del servidor
+    client=client,  # Tu objeto cliente
+    credentials=ssl_credentials  # Proporcionar las credenciales TLS
+)
+
+
+    certificates=(
+                Path("./src/certificates/rootCA_cert.pem").read_bytes(),
+                Path("./src/certificates/server_cert.pem").read_bytes(),
+                Path("./src/certificates/server_key.pem").read_bytes(),
+            ),    config=fl.server.ServerConfig(num_rounds=params.num_rounds),
+        
+"""
