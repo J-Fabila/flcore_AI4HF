@@ -139,6 +139,9 @@ class FlowerClient(fl.client.NumPyClient):
             results = main_training_loop(self.model, train_filepath, test_filepath,
                                     model_path, self.optimizer, self.params.epochs,
                                    self.params.lr_patience, self.scheduler, self.device)
+            ## AQUI TAMBIEN
+            self.tempprc , self.tempauroc, self.test_loss, _ = results
+
             trainloader_dataset_len = 1.0 #self.dataset.train_size
             #print("FIT :: PREVIO A REGRESAR PARAMS",self.get_parameters(config={}),trainloader_dataset_len)                
             return self.get_parameters(config={}), int(trainloader_dataset_len), {}
@@ -165,10 +168,11 @@ class FlowerClient(fl.client.NumPyClient):
     """
     def evaluate(self, parameters, params):
         if self.params.local_model == "MLP":
-            return 0.0, 1, {"accuracy":0.0}
+            #return tempprc, tempauroc, test_loss, model
+#            return 0.0, 1, {"accuracy":0.0}
 #           OJO que tendrías que cambiar las variables en el server: linea 14 en la definicion del weighted avarage
 #           tendrias que adaptar la funcion
-#            return 0.0, 1, {"tempprc":self.results[0], "tempauroc":}
+            return 0.0, 1, {"tempprc":self.tempprc, "tempauroc":self.tempauroc,"loss":self.test_loss}
         else:
             # parameters es una lista y params un diccionario vacio
             # En principio aqui aceptamos params, pero no depende de nosotros pasar params,
