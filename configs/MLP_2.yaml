@@ -60,7 +60,7 @@ data_folder : data/
 n_channels : 1
 
 # Logging variables
-log_path : mlp_test
+log_path : mlp_test_2
 every_n_epochs : 1
 wandb_track : False
 wandb_project : MLP_Fed
