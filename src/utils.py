@@ -4,6 +4,7 @@ import yaml
 import os
 import re
 import glob
+import argparse
 
 class Parameters:
     def __init__(self):
@@ -85,6 +86,87 @@ class Parameters:
             'wandb_entity': None,           
             'save_top_k': 1
             }
+
+    def GetParamsCMD(self):
+        parser = argparse.ArgumentParser(description="Training configuration")
+        
+        # Device variables
+        parser.add_argument('--device', type=str, default='cuda') #, choices=['cuda', 'cpu'])
+        parser.add_argument('--n_gpu', type=int, default=1)
+        parser.add_argument('--n_gpu_nodes', type=int, default=1)
+        parser.add_argument('--num_workers', type=int, default=4)
+        parser.add_argument('--client_id', type=int, default=None)
+        parser.add_argument('--num_clients', type=int, default=5)
+        parser.add_argument('--set_server', type=str, default="False") #action='store_true')
+        parser.add_argument('--strategy', type=str, default=None)
+        parser.add_argument('--min_fit_clients', type=int, default=2)
+        parser.add_argument('--min_evaluate_clients', type=int, default=2)
+        parser.add_argument('--min_available_clients', type=int, default=2)
+        parser.add_argument('--metrics_aggregation', type=str, default=None)
+        parser.add_argument('--server_address', type=str, default=None)
+        
+        # Model variables
+        parser.add_argument('--federated', type=str, default="False")
+        parser.add_argument('--use_certificates', type=str, default="False")
+        parser.add_argument('--local_model', type=str, default=None)
+        parser.add_argument('--features', type=str, default=None)
+        parser.add_argument('--configuration_file', type=str, default=None)
+        parser.add_argument('--load_checkpoint', type=str, default=None)
+        parser.add_argument('--task', type=str, default=None)
+        parser.add_argument('--in_channels', type=int, default=None)
+        parser.add_argument('--num_labels', type=int, default=1)
+        parser.add_argument('--feature_size', type=int, default=1)
+        parser.add_argument('--mlp_hidden_sizes', type=int, nargs='+', default=[1,1])
+        parser.add_argument('--mlp_output_size', type=int, default=1)
+        parser.add_argument('--ode_hidden_size', type=int, default=1)
+        parser.add_argument('--ode_num_layers', type=int, default=1)
+        parser.add_argument('--ode_batch_norm', type=int, default=1)
+        parser.add_argument('--time_nums', type=int, default=50)
+        parser.add_argument('--MLP_preprocess', type=str, default=None)
+        parser.add_argument('--n_classes', type=int, default=None)
+        parser.add_argument('--UNet_depth', type=int, default=None)
+        parser.add_argument('--UNet_bilinear', action='store_true')
+        parser.add_argument('--UNet_custom_shape', type=str, default=None)
+        
+        # Training variables
+        parser.add_argument('--batch_size', type=int, default=32)
+        parser.add_argument('--train_size', type=float, default=0.8)
+        parser.add_argument('--val_size', type=float, default=0.1)
+        parser.add_argument('--test_size', type=float, default=0.1)
+        parser.add_argument('--epochs', type=int, default=10)
+        parser.add_argument('--num_rounds', type=int, default=10)
+        parser.add_argument('--verbatim', action='store_true')
+        
+        # Optimizer variables
+        parser.add_argument('--optimizer', type=str, default='Adam')
+        parser.add_argument('--dropout', type=float, default=0.1)
+        parser.add_argument('--lr', type=float, default=0.001)
+        parser.add_argument('--lr_min', type=float, default=1e-6)
+        parser.add_argument('--lr_factor', type=float, default=0.5)
+        parser.add_argument('--lr_patience', type=int, default=10)
+        parser.add_argument('--lr_scheduler', type=str, default='ReduceLROnPlateau')
+        parser.add_argument('--clip', type=float, default=1.0)
+        parser.add_argument('--early_stopping_patience', type=int, default=10)
+        
+        # Dataset variables
+        parser.add_argument('--dataset', type=str, default=None)
+        parser.add_argument('--dataset_root', type=str, default=None)
+        parser.add_argument('--data_folder', type=str, default=None)
+        parser.add_argument('--train_filepath', type=str, default=None)
+        parser.add_argument('--test_filepath', type=str, default=None)
+        parser.add_argument('--target_label', type=str, default=None)
+        parser.add_argument('--n_channels', type=int, default=1)
+        
+        # Logging variables
+        parser.add_argument('--log_path', type=str, default='./')
+        parser.add_argument('--every_n_epochs', type=int, default=1)
+        parser.add_argument('--wandb_track', type=str, default="False")
+        parser.add_argument('--wandb_project', type=str, default=None)
+        parser.add_argument('--wandb_run_name', type=str, default=None)
+        parser.add_argument('--wandb_entity', type=str, default=None)
+        parser.add_argument('--save_top_k', type=int, default=1)
+        
+        return parser
 
     def GetParams(self, input_file):
         ext = input_file.split(".")[-1]
