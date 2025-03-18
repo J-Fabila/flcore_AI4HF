@@ -11,3 +11,9 @@ src/Models/MLP/.ipynb_checkpoints/*
 src/.ipynb_checkpoints/*
 
 wandb/*
+data/*pt
+data/*pth
+data/*json
+mlp_test/*
+mlp_test_1/*
+mlp_test_2/*
