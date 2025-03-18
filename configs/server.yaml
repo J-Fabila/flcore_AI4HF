@@ -7,6 +7,7 @@ use_certificates : False
 strategy : FedAvg
 metrics_aggregation: weighted_average
 local_model: MLP
+features : maggic
 #curl https://ifconfig.me
 server_address : 0.0.0.0:8080
 #161.116.133.136:8080
