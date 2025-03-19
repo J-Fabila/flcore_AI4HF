@@ -1,5 +1,6 @@
 import os
 import sys
+import json
 import numpy as np
 import torch
 from pathlib import Path
@@ -14,10 +15,11 @@ from Models.MLP.model import MLP_SODEN
 from model_wrapper import ModelWrapper
 
 # Add 'lib' directory to Python's module search path
+sys.path.append("/home/jorge/work_dir/nouman/passport/python-auto-metadata-collection/lib")
 #sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "lib")))
 
-#from ai4hf_passport_torch import TorchMetadataCollectionAPI
-#from ai4hf_passport_models import LearningStage, EvaluationMeasure, Model, LearningStageType, EvaluationMeasureType
+from ai4hf_passport_torch import TorchMetadataCollectionAPI
+from ai4hf_passport_models import LearningStage, EvaluationMeasure, Model, LearningStageType, EvaluationMeasureType
 
 params = Parameters()
 config_file = sys.argv[1]
@@ -42,7 +44,10 @@ def weighted_average(metrics: List[Tuple[int, Metrics]]) -> Metrics:
     for key in keys:
         weighted_sum = sum(num_examples * m[key] for num_examples, m in metrics)
         aggregated[key] = weighted_sum / total_examples
-
+    #print("WEIGHTED AVERAGE :: aggregated", aggregated)
+    with open("metrics.json", "w") as f:
+        json.dump(aggregated, f, indent=4) 
+    # ********** * * * * *  *  *  *  *    *   *  *  * * * * *************
     return aggregated
 
 def equal_average(metrics: List[Tuple[int, Metrics]]) -> Metrics:
@@ -170,7 +175,7 @@ else:
 
 # ******** * * *  *  *   *    *   *   *   *  * * * * * * **************
 # Construct an api client for interacting with AI4HF passport server
-"""
+
 api_client = TorchMetadataCollectionAPI(
         passport_server_url="http://localhost:80/ai4hf/passport/api",
         study_id="1",
@@ -182,19 +187,30 @@ api_client = TorchMetadataCollectionAPI(
 # Provide learning stages
 learning_stages = [
     LearningStage(learningStageType = LearningStageType.TRAINING,
-                  datasetPercentage = 70),
+                  datasetPercentage = str(params.train_size)),
     LearningStage(learningStageType = LearningStageType.TEST,
-                  datasetPercentage = 30)
+                  datasetPercentage = str(params.test_size)),
+    LearningStage(learningStageType = LearningStageType.VALIDATION,
+                  datasetPercentage = str(params.val_size))
 ]
+
+with open("metrics.json", "r") as f:
+    metrics_file = json.load(f)
+# {'tempauroc': 0.5018877581090273, 'tempprc': 0.5009819110168369, 'loss': 2.470166275946147}
 
 # Provide evaluation measures
 evaluation_measures = [
-    EvaluationMeasure(EvaluationMeasureType.ACCURACY,
-                      value = "0.94"),
-    EvaluationMeasure(EvaluationMeasureType.F1_SCORE,
-                      value = "0.88")
+    EvaluationMeasure(EvaluationMeasureType.MAE,
+                      value = str(metrics_file["loss"])),
+    EvaluationMeasure(EvaluationMeasureType.ROC,
+                      value = str(metrics_file["tempprc"])),
+    EvaluationMeasure(EvaluationMeasureType.AUC,
+                      value = str(metrics_file["tempauroc"]))
 ]
-
+"""
+        loss defined :
+        loss_fct = SurvODELoss(reduction='mean')
+"""
 # Provide model details
 model_info = Model(
     name = "test",
@@ -203,4 +219,7 @@ model_info = Model(
 
 # Call this function with your model object
 api_client.submit_results_to_ai4hf_passport(model, learning_stages, evaluation_measures, model_info)
-"""
+
+## COSAS POR AHCER:
+# Hacer variable el directorio del lib passport
+# personalizar el lerning stage y el evaluation measures
