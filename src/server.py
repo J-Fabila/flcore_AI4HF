@@ -187,11 +187,11 @@ api_client = TorchMetadataCollectionAPI(
 # Provide learning stages
 learning_stages = [
     LearningStage(learningStageType = LearningStageType.TRAINING,
-                  datasetPercentage = str(params.train_size)),
+                  datasetPercentage = int(100*params.train_size)),
     LearningStage(learningStageType = LearningStageType.TEST,
-                  datasetPercentage = str(params.test_size)),
+                  datasetPercentage = int(100*params.test_size)),
     LearningStage(learningStageType = LearningStageType.VALIDATION,
-                  datasetPercentage = str(params.val_size))
+                  datasetPercentage = int(100*params.val_size))
 ]
 
 with open("metrics.json", "r") as f:
