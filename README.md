@@ -14,7 +14,7 @@ To set up and run the project, follow the steps below:
    Run the following commands to activate and install the required libraries:
    ```bash
    conda activate mlp
-   pip install wandb rich tqdm flwr==1.8 pytorch-lightning scikit-learn torchdiffeq lifelines pyarrow
+   pip3 install wandb rich tqdm flwr==1.8 pytorch-lightning scikit-learn torchdiffeq lifelines pyarrow
    ```
 
 3. **Install PyTorch**  
@@ -26,15 +26,10 @@ To set up and run the project, follow the steps below:
 
 To run the project, use the `main.py` script, specifying the configuration file and the desired role (server or client). Follow these steps:
 
-1. **Run the Server**
-   ```
-   python main.py configs/server.yaml
-   ```
-
-2. **Run the Client (MLP)**
+1. **Run the client**
    ```
    python main.py configs/MLP.yaml
-   python main.py configs/MLP_2.yaml
    ```
+
 
 Ensure the configuration file (`configs/config.file`) is properly set up for your environment and use case.
