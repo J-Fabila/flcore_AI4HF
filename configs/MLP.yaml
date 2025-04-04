@@ -6,8 +6,7 @@ num_workers : 0
 client_id : 1
 num_clients : 10
 set_server : False
-server_address : 0.0.0.0:8080
-#161.116.4.119:4433
+server_address : 37.222.187.198:8000
 
 # Model variables
 federated : True
