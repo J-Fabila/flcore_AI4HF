@@ -216,9 +216,7 @@ def main():
     if params.use_certificates == True or params.use_certificates == "True":
         fl.client.start_client(
              server_address=params.server_address,
-             root_certificates=( Path("./src/certificates/rootCA_cert.pem").read_bytes(),
-             Path("./src/certificates/rootCA_cert.pem").read_bytes(),
-             Path("./src/certificates/rootCA_key.pem").read_bytes() ),
+             root_certificates=Path("./src/certificates/rootCA_cert.pem").read_bytes(),
              client=client)
     else:
         fl.client.start_client(
