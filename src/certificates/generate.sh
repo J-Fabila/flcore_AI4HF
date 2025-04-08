@@ -10,9 +10,11 @@ openssl req -new -x509 -key rootCA_key.pem -out rootCA_cert.pem -days 36500 -sub
 openssl genpkey -algorithm RSA -out server_key.pem
 
 # Generate server certificate signing request (CSR)
-openssl req -new -key server_key.pem -out server_csr.pem -subj "/CN=161.116.4.119/O=UB/C=ES"
+#openssl req -new -key server_key.pem -out server_csr.pem -subj "/CN=161.116.4.119/O=UB/C=ES"
+openssl req -new -key server_key.pem -out server_csr.pem -subj "/CN=37.222.187.198/O=UB/C=ES"
 
 # Generate server certificate
-openssl x509 -req -in server_csr.pem -CA rootCA_cert.pem -CAkey rootCA_key.pem -out server_cert.pem -set_serial $(date +%s) -days 36500 -extfile <(printf "subjectAltName=DNS:161.116.4.119")
+openssl x509 -req -in server_csr.pem -CA rootCA_cert.pem -CAkey rootCA_key.pem -out server_cert.pem -set_serial $(date +%s) -days 36500 -extfile <(printf "subjectAltName=IP:37.222.187.198")
+#-extfile <(printf "subjectAltName=DNS:37.222.187.198:8000")
 
 #-extfile <(printf "subjectAltName=DNS:bcnaim.ub.edu")
