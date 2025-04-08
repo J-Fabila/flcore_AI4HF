@@ -2,7 +2,7 @@ import torch
 import numpy as np
 import torch.nn as nn
 import torch.nn.functional as F
-from torchmetrics.classification import Dice
+#from torchmetrics.classification import Dice
 import pytorch_lightning as pl
 
 from torch.optim.lr_scheduler import ReduceLROnPlateau
