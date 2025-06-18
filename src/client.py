@@ -205,7 +205,8 @@ def main():
         exit()
 
     # No needed to load data since that will be done by training torch lightning wrapper
-    unbias_preprocessing(params.params)
+    if params.preprocessing == "True":
+        unbias_preprocessing(params.params)
     # Creation of the model instances
     print(" ################################################### INITIAL PARAMS", params)
 
