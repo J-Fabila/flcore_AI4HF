@@ -22,7 +22,9 @@ from Models.MLP.model import MLP_SODEN
 from mlp_trainer import main_training_loop
 
 from model_wrapper import ModelWrapper
-from dataloaders import MMsDataSet,LightningWrapperData  
+from dataloaders import MMsDataSet,LightningWrapperData
+
+from unbias import unbias_preprocessing
 
 class FlowerClient(fl.client.NumPyClient):
     def __init__(self, params):
@@ -203,7 +205,7 @@ def main():
         exit()
 
     # No needed to load data since that will be done by training torch lightning wrapper
-
+    unbias_preprocessing(params.params)
     # Creation of the model instances
     print(" ################################################### INITIAL PARAMS", params)
 
