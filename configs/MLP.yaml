@@ -58,6 +58,12 @@ early_stopping_patience : 10
 data_folder : data/
 n_channels : 1
 
+
+# Bias mitigation
+preprocessing : True # False
+method : SUP # colección de métodos: SUP, RW, DIR, CPP, PSTA
+variables : gender # por ejemplo, edad, gender, ethnics, etc
+
 # Logging variables
 log_path : mlp_test_1
 every_n_epochs : 1
