@@ -61,10 +61,11 @@ data_path : data/
 data_file : data.parquet
 
 # Bias mitigation
-bias_preprocessing : True # False
-method : SUP # colección de métodos: SUP, RW, DIR, CPP, PSTA
-sensitive : gender
-label : None
+bias_preprocessing : True
+method : SUP
+sensitive: patient_demographics_gender #patient_demographics_age
+label: conditions_ap_any
+
 # Logging variables
 log_path : mlp_test_1
 every_n_epochs : 1
