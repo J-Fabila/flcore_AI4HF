@@ -49,11 +49,11 @@ def unbias_preprocessing(config):
 
     features = [col for col in dat.columns]
 
-    assert sensitive_attr in dat.columns and label_attr in dat.columns
+#    assert sensitive_attr in dat.columns and label_attr in dat.columns
 
     if config["method"] == "SUP":
         # Faltaría verificar si se puede con varios atributos
-        dat = dat.drop(columns=[sensitive_attr])
+        dat = dat.drop(columns=sensitive_attr)
     elif config["method"] == "RW":
         dat = apply_reweighing(dat, sensitive_attr, label_attr)
     elif config["method"] == "DIR":
