@@ -63,7 +63,11 @@ data_file : data.parquet
 # Bias mitigation
 bias_preprocessing : True
 method : SUP
-sensitive: patient_demographics_gender #patient_demographics_age
+sensitive: ["patient_demographics_gender", "patient_demographics_age"]
+# Either option works:
+# sensitive: patient_demographics_gender
+# sensitive: ["patient_demographics_gender", "patient_demographics_age"]
+
 label: conditions_ap_any
 
 # Logging variables
