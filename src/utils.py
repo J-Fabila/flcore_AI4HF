@@ -76,6 +76,15 @@ class Parameters:
             'test_filepath': None,
             'target_label': None,
             'n_channels' : 1,
+            # integración con el cmd line
+            'data_path': None,
+            'data_file': None,
+
+            # Bias mitigation
+            'bias_preprocessing' : False,
+            'method' : None,
+            'sensitive': None,
+            'label': None,
 
             # Logging variables
             'log_path': './',
@@ -156,7 +165,15 @@ class Parameters:
         parser.add_argument('--test_filepath', type=str, default=None)
         parser.add_argument('--target_label', type=str, default=None)
         parser.add_argument('--n_channels', type=int, default=1)
-        
+        parser.add_argument('--data_path', type=str, default=None)
+        parser.add_argument('--data_file', type=str, default=None)
+
+        # Bias mitigation
+        parser.add_argument('--bias_preprocessing', type=str, default=None)
+        parser.add_argument('--method', type=str, default=None)
+        parser.add_argument("--sensitive", type=str, nargs='+', default=None, help="Sensitive variables")
+        parser.add_argument('--label',type=str, default=None)
+
         # Logging variables
         parser.add_argument('--log_path', type=str, default='./')
         parser.add_argument('--every_n_epochs', type=int, default=1)
@@ -245,7 +262,16 @@ class Parameters:
         self.test_filepath = self.params["test_filepath"]
         self.target_label = self.params["target_label"]
         self.n_channels = self.params["n_channels"]
+        # integración con el cmd line
+        self.data_path = self.params["data_path"]
+        self.data_file = self.params["data_file"]
         
+        # Bias mitigation
+        self.bias_preprocessing = self.params["bias_preprocessing"]
+        self.method = self.params["method"]
+        self.sensitive = self.params["sensitive"]
+        self.label = self.params["label"]
+
         # Logging variables
         self.log_path = self.params["log_path"]
         self.every_n_epochs = self.params["every_n_epochs"]
