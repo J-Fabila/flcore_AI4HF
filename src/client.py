@@ -203,9 +203,10 @@ def main():
     else:
         print("*.yaml input file needed as command line argument")
         exit()
-
+    print("PARAMS BIAS PREP", params.bias_preprocessing)
     # No needed to load data since that will be done by training torch lightning wrapper
-    if params.bias_preprocessing == "True":
+    if params.bias_preprocessing == True or params.bias_preprocessing == "True":
+        print("INICIA :: ARRANCA EL PREPROCESING")
         unbias_preprocessing(params.params)
     # Creation of the model instances
     print(" ################################################### INITIAL PARAMS", params)
