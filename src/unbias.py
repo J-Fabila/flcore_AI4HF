@@ -58,4 +58,6 @@ def unbias_preprocessing(config):
         dat = apply_reweighing(dat, sensitive_attr, label_attr)
     elif config["method"] == "DIR":
         dat = apply_disparate_impact_remover()
-    dat.to_parquet("archivo.parquet", engine="pyarrow")
+    preprocessed_file = "archivo.parquet"
+    dat.to_parquet(preprocessed_file, engine="pyarrow")
+    return preprocessed_file
