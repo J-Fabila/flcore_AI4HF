@@ -77,8 +77,10 @@ class FlowerClient(fl.client.NumPyClient):
 
         if params.local_model == "MLP":
             if params.MLP_preprocess:
-            #************* * * *  *  *  *   *  Data preprocessing  *    *  *  *  *  * * *************
                 configuration = load_json_config(params.configuration_file)
+                if params.bias_preprocessing == True or params.bias_preprocessing == "True":
+                    configuration["file_path"] = "archivo.parquet" # temporal, a decidir cómo gestionarlo
+            #************* * * *  *  *  *   *  Data preprocessing  *    *  *  *  *  * * *************
                 # Process imputed data
                 process_imputed_data(configuration)
             #************* * * *  *  *  *   *   *      *     *     *    *  *  *  *  * * *************
@@ -207,7 +209,8 @@ def main():
     # No needed to load data since that will be done by training torch lightning wrapper
     if params.bias_preprocessing == True or params.bias_preprocessing == "True":
         print("INICIA :: ARRANCA EL PREPROCESING")
-        unbias_preprocessing(params.params)
+        preprocessed_file = unbias_preprocessing(params.params)
+
     # Creation of the model instances
     print(" ################################################### INITIAL PARAMS", params)
 
