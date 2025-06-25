@@ -62,13 +62,13 @@ data_file : data.parquet
 
 # Bias mitigation
 bias_preprocessing : True
-method : RW # RW DIR SUP
-#sensitive: ["patient_demographics_gender", "patient_demographics_age"]
-# Either option works:
+method : DIR # RW DIR SUP
 sensitive: patient_demographics_gender
-# sensitive: ["patient_demographics_gender", "patient_demographics_age"]
-
-label: conditions_ap_any
+# ["patient_demographics_gender", "patient_demographics_age"] # works for SUP
+label: lab_results_triGly_value_avg 
+# conditions_ap_any
+# Con SUP se pueden suprimir varias a la vez
+# con las otras por la naturaleza misma de su definición no es posible utilizar mas de una columna
 
 # Logging variables
 log_path : mlp_test_1
