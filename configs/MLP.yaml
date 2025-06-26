@@ -62,7 +62,7 @@ data_file : data.parquet
 
 # Bias mitigation
 bias_preprocessing : True
-method : DIR # RW DIR SUP
+method : FPCA # RW DIR SUP SAM FPCA
 sensitive: patient_demographics_gender
 # ["patient_demographics_gender", "patient_demographics_age"] # works for SUP
 label: lab_results_triGly_value_avg 
