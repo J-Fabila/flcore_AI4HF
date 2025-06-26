@@ -13,3 +13,10 @@
 | Fair Regularization   | pycox (DeepSurv, DeepHit)   | Alta flexibilidad         |
 | Calibración por grupo | Cualquier modelo            | Postprocesamiento ligero  |
 | Adversarial debiasing | pycox personalizado         | Más complejo pero potente |
+
+Algoritmo a seguir
+1. Limpieza básica (NaNs, tipos de datos)
+2. Codificación de variables categóricas (one-hot o label encoding)
+3. Estandarización o normalización de variables numéricas (opcional si haces DIR/Fair PCA)
+4. Mitigación de sesgos (RW, DIR, FPCA, SAM)
+5. Entrenamiento del modelo
