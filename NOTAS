@@ -1,0 +1,15 @@
+					26 de junio del 2025
+| Métrica                           | Qué mide                                              |
+| --------------------------------- | ----------------------------------------------------- |
+| **Disparidad en tiempo esperado** | Diferencia en esperanza de vida estimada entre grupos |
+| **Disparidad en riesgo**          | Diferencia en riesgo acumulado o instantáneo          |
+| **C-index por grupo**             | Desempeño del modelo por grupo                        |
+| **Fairness through unawareness**  | Mismo modelo entrenado sin grupo sensible como input  |
+| **Calibration error por grupo**   | Diferencias en supervivencia observada vs. estimada   |
+
+| Técnica               | Modelo                      | ¿Funciona bien con...?    |
+| --------------------- | --------------------------- | ------------------------- |
+| Reweighing            | Cox, pycox, scikit-survival | Fácil y efectivo          |
+| Fair Regularization   | pycox (DeepSurv, DeepHit)   | Alta flexibilidad         |
+| Calibración por grupo | Cualquier modelo            | Postprocesamiento ligero  |
+| Adversarial debiasing | pycox personalizado         | Más complejo pero potente |
