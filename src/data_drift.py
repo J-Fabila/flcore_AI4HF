@@ -68,3 +68,27 @@ def drift_detection(config):
     dat[map_variables.keys()].dropna()
 
     return 
+
+
+# NOTAS
+a. Kolmogorov-Smirnov (KS test)
+
+Para variables continuas.
+
+Compara dos distribuciones (entrenamiento vs. producción).
+
+from scipy.stats import ks_2samp
+
+ks_stat, p_value = ks_2samp(train_data['edad'], prod_data['edad'])
+if p_value < 0.05:
+    print("Drift detectado")
+b. Chi-cuadrado
+Para variables categóricas.
+
+from scipy.stats import chi2_contingency
+
+contingency_table = pd.crosstab(train_data['genero'], prod_data['genero'])
+chi2, p, _, _ = chi2_contingency(contingency_table)
+if p < 0.05:
+    print("Drift detectado")
+
