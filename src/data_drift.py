@@ -2,45 +2,51 @@ import json
 import numpy as np
 import pandas as pd
 import argparse
+from scipy.stats import ks_2samp
+from scipy.stats import chi2_contingency
 
 from utils import Parameters
 
-def drift_detection(config):
-    with open(config["data_path"]+config['metadata_file'], 'r') as file:
-        metadata = json.load(file)
+def KS_test(old_data,new_data):
+    # Kolmogorov-Smirnov (KS test)
+    # For Continous variables
+    ks_stat, p_value = ks_2samp(old_data['edad'], new_data['edad'])
+    if p_value < 0.05:
+        print("Drift detectado")
+        return True
+    else:
+        return False
 
-    data_file = config["data_path"] + config["data_file"]
+def chi2(old_data,new_data):
+    # Chi-squared
+    # For categorical variables
+    contingency_table = pd.crosstab(old_data['genero'], new_data['genero'])
+    chi2, p, _, _ = chi2_contingency(contingency_table)
+    if p < 0.05:
+        print("Drift detectado")
+        return True
+    else:
+        return False
+
+def drift_detection(config):
+
+    data_file = config["data_path_1"] + config["data_file_1"]
     ext = data_file.split(".")[-1]
     if ext == "pqt" or ext == "parquet":
-        dat = pd.read_parquet(data_file)
+        dat_1 = pd.read_parquet(data_file)
     elif ext == "csv":
-        dat = pd.read_csv(data_file)
+        dat_1 = pd.read_csv(data_file)
 
-    dat_len = len(dat)
 
-    # Numerical variables
-    numeric_columns_non_zero = {}
-    for feat in metadata["entries"][0]["featureSet"]["features"]:
-        if feat["dataType"] == "NUMERIC" and feat["statistics"]["numOfNotNull"] != 0:
-            # statistic keys = ['Q1', 'avg', 'min', 'Q2', 'max', 'Q3', 'numOfNotNull']
-            numeric_columns_non_zero[feat["name"]] = (
-                feat["statistics"]["Q1"],
-                feat["statistics"]["avg"],
-                feat["statistics"]["min"],
-                feat["statistics"]["Q2"],
-                feat["statistics"]["max"],
-                feat["statistics"]["Q3"],
-                feat["statistics"]["numOfNotNull"],
-            )
+    data_file = config["data_path_2"] + config["data_file_2"]
+    ext = data_file.split(".")[-1]
+    if ext == "pqt" or ext == "parquet":
+        dat_2 = pd.read_parquet(data_file)
+    elif ext == "csv":
+        dat_2 = pd.read_csv(data_file)
 
-    for col, (q1,avg,mini,q2,maxi,q3,numOfNotNull) in numeric_columns_non_zero.items():
-        if col in dat.columns:
-            if config["normalization_method"] == "IQR":
-               dat[col] = iqr_normalize(dat[col], q1,q2,q3 )
-            elif config["normalization_method"] == "STD":
-                pass # no std found in data set
-            elif config["normalization_method"] == "MIN_MAX":
-               dat[col] = min_max_normalize(col, mini, maxi)
+    # HASTA AQUI BIEN, lo demás habrá que cambiarlo
+
     tipos=[]
     map_variables = {}
     for feat in metadata["entries"][0]["featureSet"]["features"]:
@@ -92,27 +98,5 @@ if __name__ == "__main__":
 
     config = vars(args)
 
-
-"""
-# NOTAS
-a. Kolmogorov-Smirnov (KS test)
-
-Para variables continuas.
-
-Compara dos distribuciones (entrenamiento vs. producción).
-
-from scipy.stats import ks_2samp
-
-ks_stat, p_value = ks_2samp(train_data['edad'], prod_data['edad'])
-if p_value < 0.05:
-    print("Drift detectado")
-b. Chi-cuadrado
-Para variables categóricas.
-
-from scipy.stats import chi2_contingency
-
-contingency_table = pd.crosstab(train_data['genero'], prod_data['genero'])
-chi2, p, _, _ = chi2_contingency(contingency_table)
-if p < 0.05:
-    print("Drift detectado")
-"""
+    drift_detection(config)
+    # Aquí se tendría que integrar con la plataforma
