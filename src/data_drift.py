@@ -1,8 +1,9 @@
 import json
 import numpy as np
 import pandas as pd
+import argparse
 
-import scikitlearn
+from utils import Parameters
 
 def drift_detection(config):
     with open(config["data_path"]+config['metadata_file'], 'r') as file:
@@ -69,7 +70,30 @@ def drift_detection(config):
 
     return 
 
+if __name__ == "__main__":
 
+    parser = argparse.ArgumentParser(description="Reads parameters from command line.")
+    parser.add_argument("--dataset", type=str, default="dt4h_format", help="Dataloader to use")
+    parser.add_argument("--metadata_file", type=str, default="metadata.json", help="Json file with metadata")
+    parser.add_argument("--data_file", type=str, default="data.parquet" , help="parquet o csv file with actual data")
+    parser.add_argument("--normalization_method",type=str, default="IQR", help="Type of normalization: IQR STD MIN_MAX")
+    parser.add_argument("--train_labels", type=str, nargs='+', default=None, help="Dataloader to use")
+    parser.add_argument("--target_label", type=str, nargs='+', default=None, help="Dataloader to use")
+    parser.add_argument("--train_size", type=float, default=0.8, help="Fraction of dataset to use for training. [0,1)")
+    parser.add_argument("--num_clients", type=int, default=1, help="Number of clients")
+    parser.add_argument("--model", type=str, default="random_forest", help="Model to train")
+    parser.add_argument("--num_rounds", type=int, default=50, help="Number of federated iterations")
+    parser.add_argument("--data_path", type=str, default=None, help="Data path")
+    parser.add_argument("--production_mode", type=str, default="True",  help="Production mode")
+    parser.add_argument("--node_name", type=str, default="./", help="Node name for certificates")
+    parser.add_argument("--sandbox_path", type=str, default="./", help="Sandbox path to use")
+
+    args = parser.parse_args()
+
+    config = vars(args)
+
+
+"""
 # NOTAS
 a. Kolmogorov-Smirnov (KS test)
 
@@ -91,4 +115,4 @@ contingency_table = pd.crosstab(train_data['genero'], prod_data['genero'])
 chi2, p, _, _ = chi2_contingency(contingency_table)
 if p < 0.05:
     print("Drift detectado")
-
+"""
