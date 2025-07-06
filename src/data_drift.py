@@ -12,7 +12,7 @@ def KS_test(old_data,new_data,feature):
     # For Continous variables
     ks_stat, p_value = ks_2samp(old_data[feature], new_data[feature])
     if p_value < 0.05:
-        print("Drift detectado")
+        print("Drift detected in",feature)
         return True
     else:
         return False
@@ -23,7 +23,7 @@ def chi2(old_data,new_data,feature):
     contingency_table = pd.crosstab(old_data[feature], new_data[feature])
     chi2, p, _, _ = chi2_contingency(contingency_table)
     if p < 0.05:
-        print("Drift detectado")
+        print("Drift detected in ",feature)
         return True
     else:
         return False
@@ -45,103 +45,17 @@ def drift_detection(config):
     elif ext == "csv":
         dat_2 = pd.read_csv(data_file)
 
-    # HASTA AQUI BIEN, lo demás habrá que cambiarlo
-    # creo que si necesitariamos tener el tipo de dato del metadata, solo de uno
-
-    for variables:
-        if tipo == nominal:
-            pass
-
-def load_dt4h(config,id):
-    with open(config["data_path"]+config['metadata_file'], 'r') as file:
+    with open(config["data_path_1"]+config['metadata_file_1'], 'r') as file:
         metadata = json.load(file)
 
-    data_file = config["data_path"] + config["data_file"]
-    ext = data_file.split(".")[-1]
-    if ext == "pqt" or ext == "parquet":
-        dat = pd.read_parquet(data_file)
-    elif ext == "csv":
-        dat = pd.read_csv(data_file)
-
-    dat_len = len(dat)
-
-    # Numerical variables
-    numeric_columns_non_zero = {}
-    for feat in metadata["entries"][0]["featureSet"]["features"]:
-        if feat["dataType"] == "NUMERIC" and feat["statistics"]["numOfNotNull"] != 0:
-            # statistic keys = ['Q1', 'avg', 'min', 'Q2', 'max', 'Q3', 'numOfNotNull']
-            numeric_columns_non_zero[feat["name"]] = (
-                feat["statistics"]["Q1"],
-                feat["statistics"]["avg"],
-                feat["statistics"]["min"],
-                feat["statistics"]["Q2"],
-                feat["statistics"]["max"],
-                feat["statistics"]["Q3"],
-                feat["statistics"]["numOfNotNull"],
-            )
-
-    for col, (q1,avg,mini,q2,maxi,q3,numOfNotNull) in numeric_columns_non_zero.items():
-        if col in dat.columns:
-            if config["normalization_method"] == "IQR":
-               dat[col] = iqr_normalize(dat[col], q1,q2,q3 )
-            elif config["normalization_method"] == "STD":
-                pass # no std found in data set
-            elif config["normalization_method"] == "MIN_MAX":
-               dat[col] = min_max_normalize(col, mini, maxi)
-    tipos=[]
-    map_variables = {}
-    for feat in metadata["entries"][0]["featureSet"]["features"]:
-        tipos.append(feat["dataType"])
-        if feat["dataType"] == "NOMINAL" and feat["statistics"]["numOfNotNull"] != 0:
-            num_cat = len(feat["statistics"]["valueset"])
-            map_cat = {}
-            for ind, cat in enumerate(feat["statistics"]["valueset"]):
-                map_cat[cat] = ind
-            map_variables[feat["name"]] = map_cat
-    for col,mapa in map_variables.items():
-        dat[col] = dat[col].map(mapa)
-    
-    dat[map_variables.keys()].dropna()
-    
-    tipos=[]
-    map_variables = {}
-    boolean_map = {np.bool_(False) :0, np.bool_(True):1, "False":0,"True":1}
-    for feat in metadata["entries"][0]["featureSet"]["features"]:
-        tipos.append(feat["dataType"])
-        if feat["dataType"] == "BOOLEAN" and feat["statistics"]["numOfNotNull"] != 0:
-            map_variables[feat["name"]] = boolean_map
-    for col,mapa in map_variables.items():
-        dat[col] = dat[col].map(boolean_map)
-    
-    dat[map_variables.keys()].dropna()
-
-    """    # Print statistics
-    for i in dat.keys():
-        maxim = dat[i].max()
-        minim = dat[i].min()
-        mean = dat[i].mean()
-        estd = dat[i].std()
-        print(f"Column: {i}")
-        print(f"  Maximum:          {maxim:10.2f}")
-        print(f"  Minimum:          {minim:10.2f}")
-        print(f"  Mean:             {mean:10.2f}")
-        print(f"  Std dev:          {estd:10.2f}")
-        print("-" * 40)
-    """
-
-    dat_shuffled = dat.sample(frac=1).reset_index(drop=True)
-
-    target_labels = config["target_label"]
-    train_labels = config["train_labels"]
-    data_train = dat_shuffled[train_labels] #.to_numpy()
-    data_target = dat_shuffled[target_labels] #.to_numpy()
-
-    X_train = data_train[:int(dat_len*config["train_size"])]
-    y_train = data_target[:int(dat_len*config["train_size"]):].iloc[:, 0]
-
-    X_test = data_train[int(dat_len*config["train_size"]):]
-    y_test = data_target[int(dat_len*config["train_size"]):].iloc[:, 0]
-    return (X_train, y_train), (X_test, y_test)
+    for feat in metadata["entity"]["features"]:
+        feature = feat["name"]
+        if feat["dataType"] == "NUMERIC":
+            KS_test(dat_1,dat_2,feature)
+        elif feat["dataType"] == "NOMINAL":
+            chi2(dat_1,dat_2,feature)
+        elif feat["dataType"] == "BOOLEAN":
+            chi2(dat_1,dat_2,feature)
 
 if __name__ == "__main__":
 
