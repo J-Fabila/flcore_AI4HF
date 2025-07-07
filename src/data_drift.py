@@ -48,14 +48,22 @@ def drift_detection(config):
     with open(config["data_path_1"]+config['metadata_file_1'], 'r') as file:
         metadata = json.load(file)
 
+    drift_dict = {}
     for feat in metadata["entity"]["features"]:
         feature = feat["name"]
         if feat["dataType"] == "NUMERIC":
-            KS_test(dat_1,dat_2,feature)
+            drift = KS_test(dat_1,dat_2,feature)
         elif feat["dataType"] == "NOMINAL":
-            chi2(dat_1,dat_2,feature)
+            drift = chi2(dat_1,dat_2,feature)
         elif feat["dataType"] == "BOOLEAN":
-            chi2(dat_1,dat_2,feature)
+            drift = chi2(dat_1,dat_2,feature)
+        drift_dict[feat] = drift
+
+    # ¿change to json?
+    with open("archivo.json", "w") as json_file_out:
+        json.dump(drift_dict, json_file_out, indent=4)
+        
+    #return drift_dict
 
 if __name__ == "__main__":
 
