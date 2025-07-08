@@ -45,19 +45,28 @@ def drift_detection(config):
     elif ext == "csv":
         dat_2 = pd.read_csv(data_file)
 
-    with open(config["data_path_1"]+config['metadata_file_1'], 'r') as file:
+    with open(config['metadata_file_1'], 'r') as file:
         metadata = json.load(file)
 
     drift_dict = {}
     for feat in metadata["entity"]["features"]:
         feature = feat["name"]
+        print("FEATURE",feature, feat["dataType"])
         if feat["dataType"] == "NUMERIC":
-            drift = KS_test(dat_1,dat_2,feature)
+            dat_1["temp"] = pd.to_numeric(dat_1[feature], errors="coerce")
+            #print("NANS DETECTADO", dat_1["temp"].isna().sum())
+
+            dat_1["temp"].fillna(0)
+
+            dat_2["temp"] = pd.to_numeric(dat_2[feature], errors="coerce")
+            dat_2["temp"].fillna(0)
+
+            drift = KS_test(dat_1,dat_2,"temp")
         elif feat["dataType"] == "NOMINAL":
             drift = chi2(dat_1,dat_2,feature)
         elif feat["dataType"] == "BOOLEAN":
             drift = chi2(dat_1,dat_2,feature)
-        drift_dict[feat] = drift
+        drift_dict[feature] = drift
 
     # ¿change to json?
     with open("archivo.json", "w") as json_file_out:
@@ -72,7 +81,7 @@ if __name__ == "__main__":
     parser.add_argument("--data_path_2", type=str, default="", help="Data path 2")
     parser.add_argument("--data_file_1", type=str, default="" , help="Data file 1")
     parser.add_argument("--data_file_2",type=str, default="", help="Data file 2")
-    parser.add_argument("--metadata_file_1", type=str, nargs='+', default=None, help="metadata file 1")
+    parser.add_argument("--metadata_file_1", type=str, default="", help="metadata file 1")
 
     args = parser.parse_args()
 
