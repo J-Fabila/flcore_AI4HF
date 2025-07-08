@@ -14,6 +14,8 @@ def KS_test(old_data,new_data,feature):
     if p_value < 0.05:
         print("Drift detected in",feature)
         return True
+    elif p_value < 1.0 and p_value > 0.05:
+        print("changes in distribution is detected ... not enough for be considered a drift")
     else:
         return False
 
@@ -102,17 +104,15 @@ def drift_detection(config):
         metadata = json.load(file)
 
     drift_dict = {}
+    print("NUM DE  COLS", len(metadata["entity"]["features"]))
     for feat in metadata["entity"]["features"]:
         feature = feat["name"]
         # IMPORTANT: DATE TIMES ARE NOT ANALYZED
         if feat["dataType"] == "NUMERIC":
-            dat_1["temp"] = pd.to_numeric(dat_1[feature], errors="coerce")
+            dat_1["temp"] = pd.to_numeric(dat_1[feature], errors="coerce").fillna(0)
             #print("NANS DETECTADO", dat_1["temp"].isna().sum())
 
-            dat_1["temp"].fillna(0)
-
-            dat_2["temp"] = pd.to_numeric(dat_2[feature], errors="coerce")
-            dat_2["temp"].fillna(0)
+            dat_2["temp"] = pd.to_numeric(dat_2[feature], errors="coerce").fillna(0)
 
             drift = KS_test(dat_1,dat_2,"temp")
         elif feat["dataType"] == "NOMINAL":
@@ -136,7 +136,7 @@ def drift_detection(config):
             else: # one is empty and the other no, thus, there were changes, thus, there is data drift
                 drift = True
 
-            print("FEATURE",feature, feat["dataType"], drift)
+        print("FEATURE",feature, feat["dataType"], drift)
 
     # ¿change to json?
     with open("archivo.json", "w") as json_file_out:
