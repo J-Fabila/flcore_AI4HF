@@ -17,6 +17,7 @@ def KS_test(old_data,new_data,feature):
     else:
         return False
 
+"""
 def chi2(old_data,new_data,feature):
     # Chi-squared
     # For categorical variables
@@ -25,6 +26,58 @@ def chi2(old_data,new_data,feature):
     if p < 0.05:
         print("Drift detected in ",feature)
         return True
+    else:
+        return False
+"""
+
+def chi2(old_data, new_data, feature, alpha=0.05, verbose=False):
+    """
+    Detecta data drift en una columna categórica usando chi² test.
+    
+    Parámetros:
+        - old_data: DataFrame antiguo (antes)
+        - new_data: DataFrame nuevo (después)
+        - feature: nombre de la columna a comparar
+        - alpha: nivel de significancia (default 0.05)
+        - verbose: imprimir info extra si True
+
+    Devuelve:
+        - True si hay drift (p < alpha), False si no
+    """
+
+    # Construir DataFrames con columna de origen
+    old = old_data[[feature]].copy()
+    old["source"] = "old"
+
+    new = new_data[[feature]].copy()
+    new["source"] = "new"
+
+    combined = pd.concat([old, new], axis=0)
+    combined = combined.dropna(subset=[feature])
+
+    # Si está vacía, no se puede aplicar el test
+    if combined.empty:
+        if verbose:
+            print(f"[SKIP] {feature}: columna vacía.")
+        return False
+
+    # Tabla de contingencia (filas = categorías, columnas = old/new)
+    contingency = pd.crosstab(combined[feature], combined["source"])
+
+    # Verifica si hay al menos dos columnas y filas
+    if contingency.shape[0] < 2 or contingency.shape[1] < 2:
+        if verbose:
+            print(f"[SKIP] {feature}: no hay suficientes categorías o grupos.")
+        return False
+
+    # Test de chi²
+    stat, p, _, _ = chi2_contingency(contingency)
+
+    if verbose:
+        print(f"[INFO] {feature}: chi² = {stat:.4f}, p = {p:.4f}")
+
+    if p < alpha:
+        return True  # True → drift detectado
     else:
         return False
 
@@ -51,7 +104,7 @@ def drift_detection(config):
     drift_dict = {}
     for feat in metadata["entity"]["features"]:
         feature = feat["name"]
-        print("FEATURE",feature, feat["dataType"])
+        # IMPORTANT: DATE TIMES ARE NOT ANALYZED
         if feat["dataType"] == "NUMERIC":
             dat_1["temp"] = pd.to_numeric(dat_1[feature], errors="coerce")
             #print("NANS DETECTADO", dat_1["temp"].isna().sum())
@@ -65,7 +118,7 @@ def drift_detection(config):
         elif feat["dataType"] == "NOMINAL":
             empty_1 = dat_1[feature].notna().any()
             empty_2 = dat_2[feature].notna().any()
-            print("NOT NA",empty_1, empty_2) # if false significa que esta vacia
+            #print("NOT NA",empty_1, empty_2) # if false significa que esta vacia
             if empty_1 == True and empty_2 == True: # ambos false
                 drift = chi2(dat_1,dat_2,feature)
             elif empty_1 == False and empty_2 == False: # ambos true
@@ -75,13 +128,16 @@ def drift_detection(config):
         elif feat["dataType"] == "BOOLEAN":
             empty_1 = dat_1[feature].notna().any()
             empty_2 = dat_2[feature].notna().any()
-            print("NOT NA",empty_1, empty_2) # if false significa que esta vacia
+            #print("NOT NA",empty_1, empty_2) # if false significa que esta vacia
             if empty_1 == True and empty_2 == True: # ambos false
                 drift = chi2(dat_1,dat_2,feature)
             elif empty_1 == False and empty_2 == False: # ambos true
                 drift = False # both empty, thus, no changes, thus, no data drift
             else: # one is empty and the other no, thus, there were changes, thus, there is data drift
                 drift = True
+
+            print("FEATURE",feature, feat["dataType"], drift)
+
     # ¿change to json?
     with open("archivo.json", "w") as json_file_out:
         json.dump(drift_dict, json_file_out, indent=4)
