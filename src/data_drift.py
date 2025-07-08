@@ -10,7 +10,11 @@ from utils import Parameters
 def KS_test(old_data,new_data,feature):
     # Kolmogorov-Smirnov (KS test)
     # For Continous variables
-    ks_stat, p_value = ks_2samp(old_data[feature], new_data[feature])
+    old_data["temp"] = pd.to_numeric(old_data[feature], errors="coerce").fillna(0)
+    #print("NANS DETECTADO", dat_1["temp"].isna().sum())
+    new_data["temp"] = pd.to_numeric(new_data[feature], errors="coerce").fillna(0)
+
+    ks_stat, p_value = ks_2samp(old_data["temp"], new_data["temp"])
     if p_value < 0.05:
         print("Drift detected in",feature)
         return True
@@ -109,12 +113,7 @@ def drift_detection(config):
         feature = feat["name"]
         # IMPORTANT: DATE TIMES ARE NOT ANALYZED
         if feat["dataType"] == "NUMERIC":
-            dat_1["temp"] = pd.to_numeric(dat_1[feature], errors="coerce").fillna(0)
-            #print("NANS DETECTADO", dat_1["temp"].isna().sum())
-
-            dat_2["temp"] = pd.to_numeric(dat_2[feature], errors="coerce").fillna(0)
-
-            drift = KS_test(dat_1,dat_2,"temp")
+            drift = KS_test(dat_1,dat_2,feature)
         elif feat["dataType"] == "NOMINAL":
             empty_1 = dat_1[feature].notna().any()
             empty_2 = dat_2[feature].notna().any()
