@@ -65,9 +65,15 @@ def drift_detection(config):
         elif feat["dataType"] == "NOMINAL":
             drift = chi2(dat_1,dat_2,feature)
         elif feat["dataType"] == "BOOLEAN":
-            drift = chi2(dat_1,dat_2,feature)
-        drift_dict[feature] = drift
-
+            empty_1 = dat_1[feature].notna().any()
+            empty_2 = dat_2[feature].notna().any()
+            print("NOT NA",empty_1, empty_2) # if false significa que esta vacia
+            if empty_1 == True and empty_2 == True: # ambos false
+                drift = chi2(dat_1,dat_2,feature)
+            elif empty_1 == False and empty_2 == False: # ambos true
+                drift = False # both empty, thus, no changes, thus, no data drift
+            else: # one is empty and the other no, thus, there were changes, thus, there is data drift
+                drift = True
     # ¿change to json?
     with open("archivo.json", "w") as json_file_out:
         json.dump(drift_dict, json_file_out, indent=4)
