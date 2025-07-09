@@ -69,7 +69,6 @@ def drift_detection(config):
         metadata = json.load(file)
 
     drift_dict = {}
-    print("NUM DE  COLS", len(metadata["entity"]["features"]))
     for feat in metadata["entity"]["features"]:
         feature = feat["name"]
         # IMPORTANT: DATE TIMES ARE NOT ANALYZED
@@ -79,13 +78,16 @@ def drift_detection(config):
             drift = chi2(dat_1,dat_2,feature)
         elif feat["dataType"] == "BOOLEAN":
             drift = chi2(dat_1,dat_2,feature)
-
         print("FEATURE",feature, feat["dataType"], drift)
+        drift_dict[feature] = drift
 
-    # ¿change to json?
     with open("archivo.json", "w") as json_file_out:
         json.dump(drift_dict, json_file_out, indent=4)
-        
+    # se podría hacer que devuelva varios valores:
+    # 0 : sin cambios
+    # 1 : cambio en los valores pero sin data drift
+    # 2 : data drift
+    #         
     #return drift_dict
 
 if __name__ == "__main__":
