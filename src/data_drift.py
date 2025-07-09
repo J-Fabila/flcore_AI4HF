@@ -23,69 +23,30 @@ def KS_test(old_data,new_data,feature):
     else:
         return False
 
-"""
-def chi2(old_data,new_data,feature):
-    # Chi-squared
-    # For categorical variables
-    contingency_table = pd.crosstab(old_data[feature], new_data[feature])
-    chi2, p, _, _ = chi2_contingency(contingency_table)
-    if p < 0.05:
-        print("Drift detected in ",feature)
+def chi2(old_data, new_data, feature, alpha=0.05):
+    empty_1 = old_data[feature].notna().any()
+    empty_2 = new_data[feature].notna().any()
+    if empty_1 == True and empty_2 == True:
+        old = old_data[[feature]].copy()
+        old["source"] = "old"
+        new = new_data[[feature]].copy()
+        new["source"] = "new"
+        combined = pd.concat([old, new], axis=0)
+        combined = combined.dropna(subset=[feature])
+        contingency = pd.crosstab(combined[feature], combined["source"])
+        stat, p_value, _, _ = chi2_contingency(contingency)
+        if p_value < 0.05:
+            print("Drift detected in",feature)
+            return True
+        elif p_value < 1.0 and p_value > 0.05:
+            print("changes in distribution is detected ... not enough for be considered a drift")
+        else:
+            return False
+    elif empty_1 == False and empty_2 == False:
+        return False # both empty, thus, no changes, thus, no data drift
+    else: # one is empty and the other no, thus, there were changes, thus, there is data drift
         return True
-    else:
-        return False
-"""
 
-def chi2(old_data, new_data, feature, alpha=0.05, verbose=False):
-    """
-    Detecta data drift en una columna categórica usando chi² test.
-    
-    Parámetros:
-        - old_data: DataFrame antiguo (antes)
-        - new_data: DataFrame nuevo (después)
-        - feature: nombre de la columna a comparar
-        - alpha: nivel de significancia (default 0.05)
-        - verbose: imprimir info extra si True
-
-    Devuelve:
-        - True si hay drift (p < alpha), False si no
-    """
-
-    # Construir DataFrames con columna de origen
-    old = old_data[[feature]].copy()
-    old["source"] = "old"
-
-    new = new_data[[feature]].copy()
-    new["source"] = "new"
-
-    combined = pd.concat([old, new], axis=0)
-    combined = combined.dropna(subset=[feature])
-
-    # Si está vacía, no se puede aplicar el test
-    if combined.empty:
-        if verbose:
-            print(f"[SKIP] {feature}: columna vacía.")
-        return False
-
-    # Tabla de contingencia (filas = categorías, columnas = old/new)
-    contingency = pd.crosstab(combined[feature], combined["source"])
-
-    # Verifica si hay al menos dos columnas y filas
-    if contingency.shape[0] < 2 or contingency.shape[1] < 2:
-        if verbose:
-            print(f"[SKIP] {feature}: no hay suficientes categorías o grupos.")
-        return False
-
-    # Test de chi²
-    stat, p, _, _ = chi2_contingency(contingency)
-
-    if verbose:
-        print(f"[INFO] {feature}: chi² = {stat:.4f}, p = {p:.4f}")
-
-    if p < alpha:
-        return True  # True → drift detectado
-    else:
-        return False
 
 def drift_detection(config):
 
@@ -115,25 +76,9 @@ def drift_detection(config):
         if feat["dataType"] == "NUMERIC":
             drift = KS_test(dat_1,dat_2,feature)
         elif feat["dataType"] == "NOMINAL":
-            empty_1 = dat_1[feature].notna().any()
-            empty_2 = dat_2[feature].notna().any()
-            #print("NOT NA",empty_1, empty_2) # if false significa que esta vacia
-            if empty_1 == True and empty_2 == True: # ambos false
-                drift = chi2(dat_1,dat_2,feature)
-            elif empty_1 == False and empty_2 == False: # ambos true
-                drift = False # both empty, thus, no changes, thus, no data drift
-            else: # one is empty and the other no, thus, there were changes, thus, there is data drift
-                drift = True
+            drift = chi2(dat_1,dat_2,feature)
         elif feat["dataType"] == "BOOLEAN":
-            empty_1 = dat_1[feature].notna().any()
-            empty_2 = dat_2[feature].notna().any()
-            #print("NOT NA",empty_1, empty_2) # if false significa que esta vacia
-            if empty_1 == True and empty_2 == True: # ambos false
-                drift = chi2(dat_1,dat_2,feature)
-            elif empty_1 == False and empty_2 == False: # ambos true
-                drift = False # both empty, thus, no changes, thus, no data drift
-            else: # one is empty and the other no, thus, there were changes, thus, there is data drift
-                drift = True
+            drift = chi2(dat_1,dat_2,feature)
 
         print("FEATURE",feature, feat["dataType"], drift)
 
