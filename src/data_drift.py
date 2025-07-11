@@ -81,6 +81,20 @@ def drift_detection(config):
         print("FEATURE",feature, feat["dataType"], drift)
         drift_dict[feature] = drift
 
+    for feat in metadata["entity"]["foutcomes"]:
+        feature = feat["name"]
+        if feat["dataType"] == "NUMERIC":
+            drift = KS_test(dat_1,dat_2,feature)
+        elif feat["dataType"] == "NOMINAL":
+            drift = chi2(dat_1,dat_2,feature)
+        elif feat["dataType"] == "BOOLEAN":
+            drift = chi2(dat_1,dat_2,feature)
+        print("OUTCOME",feature, feat["dataType"], drift)
+        drift_dict[feature] = drift
+
+    # Se tendría que añadir también la parte de outcomes:
+    # metadata["entity"]["outcomes"]
+
     with open("archivo.json", "w") as json_file_out:
         json.dump(drift_dict, json_file_out, indent=4)
     # se podría hacer que devuelva varios valores:
