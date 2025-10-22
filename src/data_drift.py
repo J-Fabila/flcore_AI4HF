@@ -85,7 +85,7 @@ def drift_detection(config):
         #print("FEATURE",feature, feat["dataType"], drift)
         drift_dict[feature] = drift
 
-    for feat in metadata["entity"]["foutcomes"]:
+    for feat in metadata["entity"]["outcomes"]:
         feature = feat["name"]
         if feat["dataType"] == "NUMERIC":
             drift = KS_test(dat_1,dat_2,feature,config["alpha"])
