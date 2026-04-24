@@ -166,6 +166,32 @@ class Parameters:
         parser.add_argument('--wandb_entity', type=str, default=None)
         parser.add_argument('--save_top_k', type=int, default=1)
         
+        # flcore-suite compatibility arguments
+        parser.add_argument("--model", type=str, default=None, help="Model to train")
+        parser.add_argument("--smooth_method", type=str, default="EqualVoting", help="Weight smoothing")
+        parser.add_argument("--smoothing_strenght", type=float, default=0.5)
+        parser.add_argument("--dropout_method", type=str, default=None)
+        parser.add_argument("--dropout_percentage", type=float, default=0.0)
+        parser.add_argument("--checkpoint_selection_metric", type=str, default="precision")
+        parser.add_argument("--experiment_name", type=str, default="experiment_1")
+        parser.add_argument("--balanced", type=str, default=None)
+        parser.add_argument("--n_estimators", type=int, default=100)
+        parser.add_argument("--max_depth", type=int, default=2)
+        parser.add_argument("--class_weight", type=str, default="balanced")
+        parser.add_argument("--levelOfDetail", type=str, default="DecisionTree")
+        parser.add_argument("--regression_criterion", type=str, default="squared_error")
+        parser.add_argument("--booster", type=str, default="gbtree")
+        parser.add_argument("--tree_method", type=str, default="hist")
+        parser.add_argument("--train_method", type=str, default="bagging")
+        parser.add_argument("--eta", type=float, default=0.1)
+        parser.add_argument("--l1_penalty", type=float, default=0.0)
+        parser.add_argument("--sandbox_path", type=str, default="/sandbox")
+        parser.add_argument("--local_port", type=int, default=8081)
+        parser.add_argument("--production_mode", type=str, default="True")
+        parser.add_argument("--n_features", type=int, default=0)
+        parser.add_argument("--n_feats", type=int, default=0)
+        parser.add_argument("--n_out", type=int, default=0)
+
         return parser
 
     def GetParams(self, input_file):
@@ -256,17 +282,100 @@ class Parameters:
         self.save_top_k = self.params["save_top_k"]
         self.ParametersVerifier()
     
+    def GetParamsFromArgs(self, args):
+        for k, v in vars(args).items():
+            if k in self.params:
+                self.params[k] = v
+
+        # Device variables
+        self.device = self.params["device"]
+        self.n_gpu = self.params["n_gpu"]
+        self.n_gpu_nodes = self.params["n_gpu_nodes"]
+        self.num_workers = self.params["num_workers"]
+        self.client_id = self.params["client_id"]
+        self.num_clients = self.params["num_clients"]
+        self.set_server = self.params["set_server"]
+        self.strategy = self.params["strategy"]
+        self.min_fit_clients = self.params["min_fit_clients"]
+        self.min_evaluate_clients = self.params['min_evaluate_clients']
+        self.min_available_clients = self.params['min_available_clients']
+        self.metrics_aggregation = self.params["metrics_aggregation"]
+        self.server_address = self.params['server_address']
+
+        # Model variables
+        self.federated = self.params["federated"]
+        self.use_certificates = self.params["use_certificates"]
+        self.local_model = self.params["local_model"]
+        self.features = self.params["features"]
+        self.configuration_file = self.params["configuration_file"]
+        self.load_checkpoint = self.params["load_checkpoint"]
+        self.task = self.params["task"]
+        self.num_labels = self.params["num_labels"]
+        self.feature_size = self.params["feature_size"]
+        self.mlp_hidden_sizes = self.params["mlp_hidden_sizes"]
+        self.mlp_output_size = self.params["mlp_output_size"]
+        self.ode_hidden_size = self.params["ode_hidden_size"]
+        self.ode_num_layers = self.params["ode_num_layers"]
+        self.ode_batch_norm = self.params["ode_batch_norm"]
+        self.time_nums = self.params["time_nums"]
+
+        self.MLP_preprocess = ['MLP_preprocess']
+        self.in_channels = self.params["in_channels"]
+        self.n_classes = self.params["n_classes"]
+        self.UNet_depth = self.params["UNet_depth"]
+        self.UNet_bilinear = self.params["UNet_bilinear"]
+        self.UNet_custom_shape = self.params["UNet_custom_shape"]
+
+        # Training variables
+        self.batch_size = self.params["batch_size"]
+        self.train_size = self.params["train_size"]
+        self.val_size = self.params["val_size"]
+        self.test_size = self.params["test_size"]
+        self.epochs = self.params["epochs"]
+        self.num_rounds = self.params["num_rounds"]
+        self.verbatim = self.params["verbatim"]
+        
+        # Optimizer variables
+        self.optimizer = self.params["optimizer"]
+        self.dropout = self.params["dropout"]
+        self.lr = self.params["lr"]
+        self.lr_min = self.params["lr_min"]
+        self.lr_factor = self.params["lr_factor"]
+        self.lr_patience = self.params["lr_patience"]
+        self.lr_scheduler = self.params["lr_scheduler"]
+        self.clip = self.params["clip"]
+        self.early_stopping_patience = self.params["early_stopping_patience"]
+
+        # Data set variables
+        self.dataset = self.params["dataset"]
+        self.dataset_root = self.params["dataset_root"]
+        self.data_folder = self.params["data_folder"]
+        self.train_filepath = self.params["train_filepath"]
+        self.test_filepath = self.params["test_filepath"]
+        self.target_label = self.params["target_label"]
+        self.n_channels = self.params["n_channels"]
+        
+        # Logging variables
+        self.log_path = self.params["log_path"]
+        self.every_n_epochs = self.params["every_n_epochs"]
+        self.wandb_track = self.params["wandb_track"]
+        self.wandb_project = self.params["wandb_project"]
+        self.wandb_run_name = self.params["wandb_run_name"]
+        self.wandb_entity = self.params["wandb_entity"]
+        self.save_top_k = self.params["save_top_k"]
+        # self.ParametersVerifier() # Avoid exiting right away while args might just be parsed
+    
     def ParametersVerifier(self):
-        if self.client_id == "None":
+        if self.client_id == "None" or self.client_id is None:
             print(" Client ID not selected")
-            if self.set_server == False:
+            if self.set_server == False or self.set_server == "False":
                 print(" Server was not selected")
                 print(" You have to set either client or server")
-                exit()
-        if self.client_id != "None":
-            if self.set_server == True:
+                # exit()
+        if self.client_id != "None" and self.client_id is not None:
+            if self.set_server == True or self.set_server == "True":
                 print(" You selected both client and server")
-                exit()
+                # exit()
 
 
 

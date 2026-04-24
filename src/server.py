@@ -22,8 +22,9 @@ from ai4hf_passport_torch import TorchMetadataCollectionAPI
 from ai4hf_passport_models import LearningStage, EvaluationMeasure, Model, LearningStageType, EvaluationMeasureType
 
 params = Parameters()
-config_file = sys.argv[1]
-params.GetParams(config_file)
+parser = params.GetParamsCMD()
+args, unknown = parser.parse_known_args()
+params.GetParamsFromArgs(args)
 
 #def weighted_average(metrics: List[Tuple[int, Metrics]]) -> Metrics:
 ##AQUI

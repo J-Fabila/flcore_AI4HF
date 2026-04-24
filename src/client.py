@@ -195,12 +195,10 @@ def main():
     ## OJO: aqui falta cambiar el len(dataset) en evaluate y fit
     print(" MAIN DEL CLIENTE =======================================")
     print(" client sim  :: main :: inicia")
-    if len(sys.argv) > 1:
-        params = Parameters()
-        params.GetParams(sys.argv[1])
-    else:
-        print("*.yaml input file needed as command line argument")
-        exit()
+    params = Parameters()
+    parser = params.GetParamsCMD()
+    args, unknown = parser.parse_known_args()
+    params.GetParamsFromArgs(args)
 
     # No needed to load data since that will be done by training torch lightning wrapper
 
