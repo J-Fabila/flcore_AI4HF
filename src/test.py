@@ -8,33 +8,19 @@ def test(modelo, dataset):
     * Implementar el accuracy en el model: esta en STEP del modelwrapper
     """
     print(" ************************************************ NEW TESTING ")
-    print(" PARAMS ", modelo.params.dataset) #, params.dataset)
-    """
-    if modelo.params.dataset == "MMs":
-        test_dataset = MMsDataSet(modelo.params)  # Carga el conjunto de datos de prueba
-        print("Cargando MMs ...")
-    elif modelo.params.dataset == "CIFAR":
-        print("Cargando CIFAR ")
-        test_dataset = CIFAR(modelo.params)  # Carga el conjunto de datos de prueba
-    else:
-        print("Dataset not available")
-        return
-    test_dataset.setup("test")
-    """
     print(" DATA SET CARGADO")
     # Crea un DataLoader para el conjunto de datos de prueba
-    #test_loader = torch.utils.data.DataLoader(test_dataset, batch_size=modelo.params.batch_size, shuffle=False)
     print(" test loader")
     # Inicializa el evaluador de PyTorch Lightning
     #trainer = pl.Trainer()
     
     trainer = pl.Trainer(
-    max_epochs=modelo.params.epochs,
-    num_nodes=modelo.params.n_gpu_nodes,
-    default_root_dir=modelo.params.log_path,
+    max_epochs=modelo.config['epochs'],
+    num_nodes=modelo.config['n_gpu_nodes'],
+    default_root_dir=modelo.config['log_path'],
     #callbacks=[model_checkpoint ,lr_monitor,rich_progress_bar],
     logger=False, #_logger,
-    gradient_clip_val=modelo.params.clip,
+    gradient_clip_val=modelo.config['clip'],
     log_every_n_steps = 1
     )
 

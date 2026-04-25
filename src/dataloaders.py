@@ -8,14 +8,14 @@ class MMsDataSet(LightningDataModule):
     pass
 
 class LightningWrapperData(LightningDataModule):
-    def __init__(self, params):
+    def __init__(self, config):
         super(LightningWrapperData, self).__init__()
-        self.data = torch.load(params.dataset_root)
-        self.params = params
+        self.data = torch.load(config['dataset_root'])
+        self.config = config
 
-        assert ( self.params.train_size + self.params.val_size + self.params.test_size ) <= 1.0 , "Sum of train + validation + test is larger than 1.0"
+        assert ( self.config['train_size'] + self.config['val_size'] + self.config['test_size'] ) <= 1.0 , "Sum of train + validation + test is larger than 1.0"
 
-        if torch.cuda.is_available() and self.params.device == 'cuda':
+        if torch.cuda.is_available() and self.config['device'] == 'cuda':
             self.device = torch.device('cuda')
         else:
             self.device = torch.device("cpu")
@@ -26,7 +26,7 @@ class LightningWrapperData(LightningDataModule):
         np.random.shuffle(indices)
 
     #if stage == "train":
-        train_size=int(self.params.train_size * self.len)
+        train_size=int(self.config['train_size'] * self.len)
         self.ind_train = indices[:train_size]
         self.train_size = len(self.ind_train)
         self.train = Subset(self.data, self.ind_train)
@@ -36,7 +36,7 @@ class LightningWrapperData(LightningDataModule):
                     self.train[config][key] = value.to(self.device)
         """       
     #if stage == "val":
-        val_size=int(self.params.val_size * self.len)
+        val_size=int(self.config['val_size'] * self.len)
         self.ind_val = indices[train_size:val_size+train_size]
         self.val_size = len(self.ind_val)
         self.val = Subset(self.data, self.ind_val)        
@@ -46,7 +46,7 @@ class LightningWrapperData(LightningDataModule):
                 if key in train:       
                     self.val[config][key] = value.to(self.device)
         """
-        test_size=int(self.params.test_size * self.len )
+        test_size=int(self.config['test_size'] * self.len )
         self.ind_test = indices[train_size+val_size:]
         self.test_size = len(self.ind_test)
         self.test = Subset(self.data, self.ind_test)
@@ -70,8 +70,8 @@ class LightningWrapperData(LightningDataModule):
 
         data_loader = DataLoader(
             dataset=dataset,
-            batch_size=self.params.batch_size,
-            num_workers=self.params.num_workers,
+            batch_size=self.config['batch_size'],
+            num_workers=self.config['num_workers'],
             pin_memory=True,
             shuffle=shuffle_,
         )

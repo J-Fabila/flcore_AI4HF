@@ -19,32 +19,32 @@ from Models.ResNet import *
 from binary import hd95, hd, assd, jc
 
 class ModelWrapper(pl.LightningModule):
-    def __init__(self, params):
+    def __init__(self, config):
         super(ModelWrapper, self).__init__()
-        self.params = params
-        self.task = params.task
-        if self.params.local_model == "Basic":
-            self.local_model = BasicConvolutional(params)
-        if self.params.local_model == "UNet":
-            self.local_model = UNet(params)
-        elif self.params.local_model == "Resnet18":
-            self.local_model = resnet18(params)
-        elif self.params.local_model == "Resnet34":
-            self.local_model = resnet34(params)
-        elif self.params.local_model == "Resnet50":
-            self.local_model = resnet50(params)
-        elif self.params.local_model == "Resnet101":
-            self.local_model = resnet101(params)
-        elif self.params.local_model == "Resnet152":
-            self.local_model = resnet152(params)
+        self.config = config
+        self.task = config['task']
+        if self.config['local_model'] == "Basic":
+            self.local_model = BasicConvolutional(config)
+        if self.config['local_model'] == "UNet":
+            self.local_model = UNet(config)
+        elif self.config['local_model'] == "Resnet18":
+            self.local_model = resnet18(config)
+        elif self.config['local_model'] == "Resnet34":
+            self.local_model = resnet34(config)
+        elif self.config['local_model'] == "Resnet50":
+            self.local_model = resnet50(config)
+        elif self.config['local_model'] == "Resnet101":
+            self.local_model = resnet101(config)
+        elif self.config['local_model'] == "Resnet152":
+            self.local_model = resnet152(config)
             # Quantized ResNet
         else:
             print("No option selected")
 
-        self.criterion = nn.CrossEntropyLoss() if self.params.n_classes > 1 else nn.BCEWithLogitsLoss()
-        if (self.params.task == "Segmentation"):
+        self.criterion = nn.CrossEntropyLoss() if self.config['n_classes'] > 1 else nn.BCEWithLogitsLoss()
+        if (self.config['task'] == "Segmentation"):
             self.dice = Dice(average='micro')
-        self.save_hyperparameters(self.params.params)
+        self.save_hyperparameters(self.config)
 
     def forward(self, image):
         #orward(self, inputs: Dict[str, torch.Tensor], label: torch.Tensor, full_eval: bool = False) -> Tuple[list, torch.Tensor]:
@@ -53,38 +53,38 @@ class ModelWrapper(pl.LightningModule):
     
     def step(self, batch, stage):
         loss = 0.0
-        images, target = batch["image"], batch[self.params.target_label]
+        images, target = batch["image"], batch[self.config['target_label']]
         outputs = self(images)
         batch_size = batch["image"].shape[0]
         with torch.set_grad_enabled(True):
-            if (self.params.task == "Classification"):
+            if (self.config['task'] == "Classification"):
                 loss += F.cross_entropy(outputs, target)
-            elif (self.params.task == "Segmentation"):
+            elif (self.config['task'] == "Segmentation"):
                 _, _, d1 , d2 = target.shape
-                original_shape = (batch_size, d1,d2,self.params.n_classes)
+                original_shape = (batch_size, d1,d2,self.config['n_classes'])
                 flat = target.flatten()
-                encoded = torch.nn.functional.one_hot(flat.to(torch.int64),self.params.n_classes)
+                encoded = torch.nn.functional.one_hot(flat.to(torch.int64),self.config['n_classes'])
                 target = encoded.view(original_shape)
                 outputs_prob = torch.sigmoid(outputs)
                 target_prob = target.permute(0, 3, 1, 2).float()
                 loss += F.binary_cross_entropy(outputs_prob, target_prob)
                 loss += self.dice(outputs_prob,target_prob.to(int))
-            elif (self.params.task == "Regression"):
+            elif (self.config['task'] == "Regression"):
                 pass
         return loss.to(dtype = torch.float32)
 
     def training_step(self, batch, batch_idx):
         loss = self.step(batch,"train")
         logs = {'train_loss': loss}
-        self.log("train_loss", loss,batch_size=self.params.batch_size) #,prog_bar=False, on_step=False)
+        self.log("train_loss", loss,batch_size=self.config['batch_size']) #,prog_bar=False, on_step=False)
         return {'loss': loss, 'log': logs}
 
     def validation_step(self, batch, batch_idx):
         loss = self.step( batch, "val")
-        images, target = batch["image"], batch[self.params.target_label]
+        images, target = batch["image"], batch[self.config['target_label']]
         outputs = self(images)
         batch_size = batch["image"].shape[0]
-        if self.params.task == "Classification":
+        if self.config['task'] == "Classification":
             acc = 0.0
             correct = 0
             total = 0
@@ -94,11 +94,11 @@ class ModelWrapper(pl.LightningModule):
             acc = 100 * correct // total            
             self.log_dict({"val_loss":loss,"acc": acc})
             logs = {'val_loss': loss,'acc':acc}
-        elif (self.params.task == "Segmentation"):
+        elif (self.config['task'] == "Segmentation"):
             _, _, d1 , d2 = target.shape
-            original_shape = (batch_size, d1,d2,self.params.n_classes)
+            original_shape = (batch_size, d1,d2,self.config['n_classes'])
             flat = target.flatten()
-            encoded = torch.nn.functional.one_hot(flat.to(torch.int64),self.params.n_classes)
+            encoded = torch.nn.functional.one_hot(flat.to(torch.int64),self.config['n_classes'])
             target = encoded.view(original_shape)
             target_prob = target.permute(0, 3, 1, 2).to(int)
             ################################################################
@@ -108,12 +108,12 @@ class ModelWrapper(pl.LightningModule):
             _, predi = torch.max(outputs_prob, 1)
             _, outsi = torch.max(target_prob,1)
             
-            encoded = torch.nn.functional.one_hot(predi.flatten().to(torch.int64),self.params.n_classes)
+            encoded = torch.nn.functional.one_hot(predi.flatten().to(torch.int64),self.config['n_classes'])
             output = encoded.view(original_shape)
             outputs_prob = output.permute(0, 3, 1, 2).to(int)
 
             hausdorff = 0.0
-            for clase in range(self.params.n_classes):
+            for clase in range(self.config['n_classes']):
                 #print("CLASE ", clase, target_prob[:,clase,:,:].max() , outputs_prob[:,clase,:,:].max())
                 #print(" TARGETS PROB", target_prob[0,:,0,0])
                 #print(" DIMENSIONES outputs prob", outputs_prob[0,:,0,0])
@@ -124,7 +124,7 @@ class ModelWrapper(pl.LightningModule):
                     outputs_prob[0,clase,0,0] = 1    
                 hausdorff += hd(outputs_prob[:,clase,:,:].cpu().numpy(),target_prob[:,clase,:,:].cpu().numpy())
                 print("HAUSDORFF ",clase, hausdorff)
-            hausdorff = hausdorff/self.params.n_classes
+            hausdorff = hausdorff/self.config['n_classes']
             print("HAUSDORFF ", hausdorff)
             logs = {'val_loss': loss,"dice":dice_,"hausdorff":hausdorff}
             self.log_dict({"val_loss":loss,"dice":dice_,"hausdorff":hausdorff})
@@ -132,10 +132,10 @@ class ModelWrapper(pl.LightningModule):
 
     def test_step(self, batch, batch_idx):
         loss = self.step( batch, "test")
-        images, target = batch["image"], batch[self.params.target_label]
+        images, target = batch["image"], batch[self.config['target_label']]
         outputs = self(images)
         batch_size = batch["image"].shape[0]
-        if self.params.task == "Classification":
+        if self.config['task'] == "Classification":
             acc = 0.0
             correct = 0
             total = 0
@@ -146,11 +146,11 @@ class ModelWrapper(pl.LightningModule):
             self.log_dict({"test_loss":loss,"acc": acc})
             logs = {'test_loss': loss,'acc':acc}
         
-        elif (self.params.task == "Segmentation"):
+        elif (self.config['task'] == "Segmentation"):
             _, _, d1 , d2 = target.shape
-            original_shape = (batch_size, d1,d2,self.params.n_classes)
+            original_shape = (batch_size, d1,d2,self.config['n_classes'])
             flat = target.flatten()
-            encoded = torch.nn.functional.one_hot(flat.to(torch.int64),self.params.n_classes)
+            encoded = torch.nn.functional.one_hot(flat.to(torch.int64),self.config['n_classes'])
             target = encoded.view(original_shape)
             target_prob = target.permute(0, 3, 1, 2).to(int)
             ################################################################
@@ -160,71 +160,24 @@ class ModelWrapper(pl.LightningModule):
             _, predi = torch.max(outputs_prob, 1)
             _, outsi = torch.max(target_prob,1)
             
-            encoded = torch.nn.functional.one_hot(predi.flatten().to(torch.int64),self.params.n_classes)
+            encoded = torch.nn.functional.one_hot(predi.flatten().to(torch.int64),self.config['n_classes'])
             output = encoded.view(original_shape)
             outputs_prob = output.permute(0, 3, 1, 2).to(int)
    
             hausdorff = 0.0
-            for clase in range(self.params.n_classes):
+            for clase in range(self.config['n_classes']):
                 if target_prob[:,clase,:,:].max() == 0:
                     target_prob[0,clase,0,0] = 1
                 if outputs_prob[:,clase,:,:].max() == 0:
                     outputs_prob[0,clase,0,0] = 1
                 hausdorff += hd(outputs_prob[:,clase,:,:].cpu().numpy(),target_prob[:,clase,:,:].cpu().numpy())
                 print("HAUSDORFF clase",clase, hausdorff)
-            hausdorff = hausdorff/self.params.n_classes
+            hausdorff = hausdorff/self.config['n_classes']
             print("HAUSDORFF ", hausdorff)
             logs = {'val_loss': loss,"dice":dice_,"hausdorff":hausdorff}
             self.log_dict({"val_loss":loss,"dice":dice_,"hausdorff":hausdorff})
         return {"loss" : loss, 'log' : logs}
         
-    """def validation_step(self, batch, batch_idx):
-        loss = self.step( batch, "validation")
-        logs = {'validation_loss': loss}
-        #---------------------------------------------------------
-        #self.log("test_loss",loss,batch_size=self.params.batch_size) #, prog_bar=True, on_step=False)
-        acc = 0.0
-        correct = 0
-        total = 0
-        with torch.no_grad():
-            loss = 0.0
-            ################################ CUIDADO AQUI CON EL LABEL
-            images, labels = batch["image"], batch["label"]
-            outputs = self(images)
-            _, predicted = torch.max(outputs.data, 1)
-            total += labels.size(0)
-            correct += (predicted == labels).sum().item()
-        acc = 100 * correct // total            
-        #for data in testloader:
-        #        images, labels = data
-                # calculate outputs by running images through the network
-        #        outputs = net(images)
-                # the class with the highest energy is what we choose as prediction
-
-        #print(f'Accuracy of the network on the 10000 test images: {100 * correct // total} %')
-        self.log_dict({"test_loss":loss,"acc": acc})
-        #---------------------------------------------------------
-        return {"loss":loss,'log' : logs}
-    
-    def test_step(self, batch, batch_idx):
-        loss = self.step( batch, "test")
-        logs = {'test_loss': loss}
-        if self.params.task == "Classification":
-            acc = 0.0
-            correct = 0
-            total = 0
-            with torch.no_grad():
-                images, target = batch["image"], batch[self.params.target_label]
-                outputs = self(images)
-                _, predicted = torch.max(outputs.data, 1)
-                total += target.size(0)
-                correct += (predicted == target).sum().item()
-            acc = 100 * correct // total       
-            self.log_dict({"test_loss":loss,"acc": acc})
-        elif (self.params.task == "Segmentation"):
-            self.log_dict({"test_loss":loss})
-        return {"loss":loss,'log' : logs}"""
-
         ###################################################
         #def training_step(self, batch, batch_idx):
         #self.log("my_metric", x)
@@ -238,60 +191,51 @@ class ModelWrapper(pl.LightningModule):
         #return {"test_loss": loss, "correct": correct, "total": len(labels)}
         ###################################################
 
-    """def test_epoch_end(self, outputs):
-        avg_loss = torch.stack([x["test_loss"] for x in outputs]).mean()
-        total_correct = torch.stack([x["correct"] for x in outputs]).sum()
-        total_items = torch.stack([x["total"] for x in outputs]).sum()
-        accuracy = total_correct.float() / total_items
-        self.log("test_loss", avg_loss)
-        self.log("test_accuracy", accuracy)"""
-
-
     def configure_optimizers(self):
         optim_dict = {
-            "SGD": torch.optim.SGD(self.parameters(), lr=self.params.lr, momentum=0.9),
-            "Adam": torch.optim.Adam(self.parameters(), lr=self.params.lr),
-            "RMSprop": torch.optim.RMSprop(self.parameters(), lr=self.params.lr),
-            "Adagrad": torch.optim.Adagrad(self.parameters(), lr=self.params.lr),
-            "Adadelta": torch.optim.Adadelta(self.parameters(), lr=self.params.lr),
-            "Adamax": torch.optim.Adamax(self.parameters(), lr=self.params.lr),
-            "ASGD": torch.optim.ASGD(self.parameters(), lr=self.params.lr)
+            "SGD": torch.optim.SGD(self.parameters(), lr=self.config['lr'], momentum=0.9),
+            "Adam": torch.optim.Adam(self.parameters(), lr=self.config['lr']),
+            "RMSprop": torch.optim.RMSprop(self.parameters(), lr=self.config['lr']),
+            "Adagrad": torch.optim.Adagrad(self.parameters(), lr=self.config['lr']),
+            "Adadelta": torch.optim.Adadelta(self.parameters(), lr=self.config['lr']),
+            "Adamax": torch.optim.Adamax(self.parameters(), lr=self.config['lr']),
+            "ASGD": torch.optim.ASGD(self.parameters(), lr=self.config['lr'])
         }
-        optimizer = optim_dict[self.params.optimizer]
+        optimizer = optim_dict[self.config['optimizer']]
         ################################################
-        optimizer = torch.optim.Adam(self.parameters(), lr=self.params.lr)
+        optimizer = torch.optim.Adam(self.parameters(), lr=self.config['lr'])
 
         ################################################
         scheduler_dict = {
             "ReduceLROnPlateau": ReduceLROnPlateau(
                 optimizer,
                 "min",
-                factor=float(self.params.lr_factor),
-                patience=float(self.params.lr_patience),
-                min_lr=float(self.params.lr_min),
+                factor=float(self.config['lr_factor']),
+                patience=float(self.config['lr_patience']),
+                min_lr=float(self.config['lr_min']),
             ),
-            "StepLR": StepLR(optimizer, step_size=1, gamma=self.params.lr_factor),
+            "StepLR": StepLR(optimizer, step_size=1, gamma=self.config['lr_factor']),
             "MultiStepLR": MultiStepLR(
-                optimizer, milestones=[1, 2, 3], gamma=self.params.lr_factor
+                optimizer, milestones=[1, 2, 3], gamma=self.config['lr_factor']
             ),
-            "ExponentialLR": ExponentialLR(optimizer, gamma=self.params.lr_factor),
+            "ExponentialLR": ExponentialLR(optimizer, gamma=self.config['lr_factor']),
             "CosineAnnealingLR": CosineAnnealingLR(
-                optimizer, T_max=10, eta_min=float(self.params.lr_min)
+                optimizer, T_max=10, eta_min=float(self.config['lr_min'])
             ),
             "CyclicLR": CyclicLR(
                 optimizer,
-                base_lr=self.params.lr_min,
-                max_lr=self.params.lr,
+                base_lr=self.config['lr_min'],
+                max_lr=self.config['lr'],
                 step_size_up=10,
                 cycle_momentum=False,
             ),
             "CosineAnnealingWarmRestarts": CosineAnnealingWarmRestarts(
-                optimizer, T_0=10, T_mult=1, eta_min=float(self.params.lr_min)
+                optimizer, T_0=10, T_mult=1, eta_min=float(self.config['lr_min'])
             ),
         }
 
         lr_scheduler = {
-            "scheduler": scheduler_dict[self.params.lr_scheduler],
+            "scheduler": scheduler_dict[self.config['lr_scheduler']],
             "monitor": 'val_loss',
             "interval": "epoch",
             "frequency": 1,

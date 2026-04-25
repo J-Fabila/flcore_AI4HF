@@ -185,22 +185,22 @@ def _resnet(n_classes, block: Type[Union[BasicBlock, Bottleneck]],layers: List[i
     model = ResNet(block, layers, num_classes = n_classes)
     return model
 
-def resnet18(params):
-    n_classes = params.n_classes
+def resnet18(config):
+    n_classes = config['n_classes']
     return _resnet(n_classes, BasicBlock, [2, 2, 2, 2])
 
-def resnet34(params):
-    n_classes = params.n_classes
+def resnet34(config):
+    n_classes = config['n_classes']
     return _resnet(n_classes, BasicBlock, [3, 4, 6, 3])
 
-def resnet50(params):
-    n_classes = params.n_classes
+def resnet50(config):
+    n_classes = config['n_classes']
     return _resnet(n_classes, Bottleneck, [3, 4, 6, 3])
 
-def resnet101(params):
-    n_classes = params.n_classes
+def resnet101(config):
+    n_classes = config['n_classes']
     return _resnet(n_classes, Bottleneck, [3, 4, 23, 3])
 
-def resnet152(params):
-    n_classes = params.n_classes
+def resnet152(config):
+    n_classes = config['n_classes']
     return _resnet(n_classes, Bottleneck, [3, 8, 36, 3])

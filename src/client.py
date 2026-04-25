@@ -14,7 +14,6 @@ import torch.optim as optim
 
 from train import train
 from test import test
-from utils import Parameters
 
 from mlp_utils import load_json_config
 from data_mlp import process_imputed_data
@@ -25,15 +24,15 @@ from model_wrapper import ModelWrapper
 from dataloaders import MMsDataSet,LightningWrapperData  
 
 class FlowerClient(fl.client.NumPyClient):
-    def __init__(self, params):
+    def __init__(self, config):
         print("INICIA")
-        self.params = params
-        if torch.cuda.is_available() and params.device == 'cuda':
+        self.config = config
+        if torch.cuda.is_available() and config['device'] == 'cuda':
             device = torch.device('cuda')
         else:
             device = torch.device("cpu")
         self.device = device
-        if params.local_model == "MLP":
+        if config['model'] == "MLP":
             configurations = [
             {
             'features': 'maggic', 'feature_size': 13, 'mlp_hidden_sizes': [16, 32, 16], 'mlp_output_size': 16, 
@@ -45,16 +44,16 @@ class FlowerClient(fl.client.NumPyClient):
             }
             ]
             print("LEYO PARAMETROS")
-            if params.features == "maggic":
+            if config['features'] == "maggic":
                 config_selector = 0
-            elif params.features == "maggic_plus":
+            elif config['features'] == "maggic_plus":
                 config_selector = 1
             print("CONFIG SELECTOR", config_selector)
             self.config = configurations[config_selector]
             #Aqui primer problema: esto no debería estar alambrado
             #self.model_folder = '/home/jorge/work_dir/nouman/AI4HF-OXF-Modelling/new_models'
             # o sería mejor ponerlo como variable
-            self.model_folder = params.log_path #'data'
+            self.model_folder = config['log_path'] #'data'
             os.makedirs(self.model_folder, exist_ok=True)  # Crea el directorio si no existe
             self.model_file = os.path.join(self.model_folder, f"{self.config['features']}_model.pth")
             model = MLP_SODEN(self.config)
@@ -67,16 +66,16 @@ class FlowerClient(fl.client.NumPyClient):
 
 #            model.suffix = self.config['features']
             self.optimizer = optim.Adam(model.parameters(), lr=1e-3)
-            self.scheduler = ReduceLROnPlateau(self.optimizer, mode='min', factor=0.1, patience=self.params.lr_patience, verbose=True)
+            self.scheduler = ReduceLROnPlateau(self.optimizer, mode='min', factor=0.1, patience=self.config['lr_patience'], verbose=True)
 
         else:
-            model = ModelWrapper(params)
+            model = ModelWrapper(self.config)
             self.model = model.to(device)
 
-        if params.local_model == "MLP":
-            if params.MLP_preprocess:
+        if self.config['local_model'] == "MLP":
+            if self.config['MLP_preprocess'] == "True":
             #************* * * *  *  *  *   *  Data preprocessing  *    *  *  *  *  * * *************
-                configuration = load_json_config(params.configuration_file)
+                configuration = load_json_config(self.config['configuration_file'])
                 # Process imputed data
                 process_imputed_data(configuration)
             #************* * * *  *  *  *   *   *      *     *     *    *  *  *  *  * * *************
@@ -84,13 +83,13 @@ class FlowerClient(fl.client.NumPyClient):
                 pass
 
         else:
-            if params.dataset == "MMs":
-                self.dataset = MMsDataSet(params)
+            if self.config['dataset'] == "MMs":
+                self.dataset = MMsDataSet(self.config)
                 
                 #self.dataset = MLPWrapperData(params)
 
-            elif params.dataset == "LightningWrapperData":
-                self.dataset = LightningWrapperData(params)
+            elif self.config['dataset'] == "LightningWrapperData":
+                self.dataset = LightningWrapperData(self.config)
             else:
                 print("Dataset not available")
                 exit()
@@ -98,8 +97,8 @@ class FlowerClient(fl.client.NumPyClient):
             self.dataset.setup("fit")
 
     def get_parameters(self, config): # config not needed at all
-        print(f"[Client {self.params.client_id}] get_parameters")
-        if self.params.local_model == "MLP":
+        print(f"[Client {self.config['client_id']}] get_parameters")
+        if self.config['local_model'] == "MLP":
             loc_model = torch.load(self.model_file)
             print("regresa valores")
             #print([val.cpu().numpy() for  val in loc_model.values()])
@@ -108,8 +107,8 @@ class FlowerClient(fl.client.NumPyClient):
             return [val.cpu().numpy() for _, val in self.model.state_dict().items()]
 
     def set_parameters(self, parameters:List[np.ndarray]):
-        print(f"[Client {self.params.client_id}] set_parameters")
-        if self.params.local_model == "MLP":
+        print(f"[Client {self.config['client_id']}] set_parameters")
+        if self.config['local_model'] == "MLP":
             # # fFalta sacar el model_keys de algun lado           
             params_dict = zip(self.model_keys(), parameters)
             state_dict = OrderedDict({k: torch.tensor(v) for k, v in params_dict})
@@ -127,18 +126,18 @@ class FlowerClient(fl.client.NumPyClient):
             self.model.load_state_dict(state_dict, strict=True)
 
     def fit(self, parameters, params):
-        if self.params.local_model == "MLP":
+        if self.config['model'] == "MLP":
             print("FIT :: ENTRA MLP self local model ")
-            train_filepath = os.path.join(self.params.data_folder, f"train_{self.config['features']}.pt")
-            test_filepath = os.path.join(self.params.data_folder, f"valid_{self.config['features']}.pt")
+            train_filepath = os.path.join(self.config['data_folder'], f"train_{self.config['features']}.pt")
+            test_filepath = os.path.join(self.config['data_folder'], f"valid_{self.config['features']}.pt")
             model_path = self.model_folder # el directorio de log de los params
             print("INICIA MAIN TRAIING LOOP")
             # Idea: self.results # asi almacenamos los results que son:
             # main_training_loop :: return tempprc, tempauroc, test_loss, model
             # así imprimimos los valores en  la línea 168
             results = main_training_loop(self.model, train_filepath, test_filepath,
-                                    model_path, self.optimizer, self.params.epochs,
-                                   self.params.lr_patience, self.scheduler, self.device)
+                                    model_path, self.optimizer, self.config['epochs'],
+                                   self.config['lr_patience'], self.scheduler, self.device)
             ## AQUI TAMBIEN
             self.tempprc , self.tempauroc, self.test_loss, _ = results
 
@@ -146,11 +145,11 @@ class FlowerClient(fl.client.NumPyClient):
             #print("FIT :: PREVIO A REGRESAR PARAMS",self.get_parameters(config={}),trainloader_dataset_len)                
             return self.get_parameters(config={}), int(trainloader_dataset_len), {}
         else:
-            print(" ***************************************** FIT self.params.client_id ", self.params)
-            print(f"[Client {self.params.client_id}] fit")
+            print(" ***************************************** FIT self.config.client_id ", self.config)
+            print(f"[Client {self.config['client_id']}] fit")
             self.set_parameters(parameters)
     #************* * * *  *  *  *   *    *    *  *  *  *  * * *************
-            train(self.model,self.params,self.dataset)
+            train(self.model,self.config,self.dataset)
     ######## Aquí el train ya incluye su propio wandb. Pero podríamos loggear
     #        las losses o algo asi del proceso de entrenamiento
             trainloader_dataset_len = self.dataset.train_size
@@ -167,7 +166,7 @@ class FlowerClient(fl.client.NumPyClient):
         return loss, 10000, {"loss": loss}
     """
     def evaluate(self, parameters, params):
-        if self.params.local_model == "MLP":
+        if self.config['local_model'] == "MLP":
             #return tempprc, tempauroc, test_loss, model
 #            return 0.0, 1, {"accuracy":0.0}
 #           OJO que tendrías que cambiar las variables en el server: linea 14 en la definicion del weighted avarage
@@ -177,7 +176,7 @@ class FlowerClient(fl.client.NumPyClient):
             # parameters es una lista y params un diccionario vacio
             # En principio aqui aceptamos params, pero no depende de nosotros pasar params,
             # flower pasa los parametros que le salen de los huevos
-            print(f"^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^[Client {self.params.client_id}] evaluate")
+            print(f"^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^[Client {self.config['client_id']}] evaluate")
             self.set_parameters(parameters)
     #************* * * *  *  *  *   *    *    *  *  *  *  * * *************
             loss, accuracy = test(self.model, self.dataset)
@@ -191,63 +190,150 @@ class FlowerClient(fl.client.NumPyClient):
             return float(loss), self.dataset.test_size, {"accuracy": float(accuracy)}
     #        return float(loss), len(testloader_dataset_len), {"accuracy": float(accuracy), "loss": float(loss)}
 
-def main():
+if __name__ == "__main__":
     ## OJO: aqui falta cambiar el len(dataset) en evaluate y fit
     print(" MAIN DEL CLIENTE =======================================")
     print(" client sim  :: main :: inicia")
-    params = Parameters()
-    parser = params.GetParamsCMD()
-    args, unknown = parser.parse_known_args()
-    params.GetParamsFromArgs(args)
+# ____________________________________________________________________________________-
+    parser = argparse.ArgumentParser(description="Training configuration")
+    
+    # Device variables
+    parser.add_argument('--device', type=str, default='cuda') #, choices=['cuda', 'cpu'])
+    parser.add_argument('--n_gpu', type=int, default=1)
+    parser.add_argument('--n_gpu_nodes', type=int, default=1)
+    parser.add_argument('--num_workers', type=int, default=4)
+    parser.add_argument('--client_id', type=int, default=None)
+    parser.add_argument('--num_clients', type=int, default=5)
+    parser.add_argument('--set_server', type=str, default="False") #action='store_true')
+    parser.add_argument('--strategy', type=str, default=None)
+    parser.add_argument('--min_fit_clients', type=int, default=2)
+    parser.add_argument('--min_evaluate_clients', type=int, default=2)
+    parser.add_argument('--min_available_clients', type=int, default=2)
+    parser.add_argument('--metrics_aggregation', type=str, default=None)
+    parser.add_argument('--server_address', type=str, default=None)
+    
+    # Model variables
+    parser.add_argument('--federated', type=str, default="False")
+    parser.add_argument('--use_certificates', type=str, default="False")
+    parser.add_argument('--local_model', type=str, default=None)
+    parser.add_argument('--features', type=str, default=None)
+    parser.add_argument('--configuration_file', type=str, default=None)
+    parser.add_argument('--load_checkpoint', type=str, default=None)
+    parser.add_argument('--task', type=str, default=None)
+    parser.add_argument('--in_channels', type=int, default=None)
+    parser.add_argument('--num_labels', type=int, default=1)
+    parser.add_argument('--feature_size', type=int, default=1)
+    parser.add_argument('--mlp_hidden_sizes', type=int, nargs='+', default=[1,1])
+    parser.add_argument('--mlp_output_size', type=int, default=1)
+    parser.add_argument('--ode_hidden_size', type=int, default=1)
+    parser.add_argument('--ode_num_layers', type=int, default=1)
+    parser.add_argument('--ode_batch_norm', type=int, default=1)
+    parser.add_argument('--time_nums', type=int, default=50)
+    parser.add_argument('--MLP_preprocess', type=str, default=None)
+    parser.add_argument('--n_classes', type=int, default=None)
+    parser.add_argument('--UNet_depth', type=int, default=None)
+    parser.add_argument('--UNet_bilinear', action='store_true')
+    parser.add_argument('--UNet_custom_shape', type=str, default=None)
+    
+    # Training variables
+    parser.add_argument('--batch_size', type=int, default=32)
+    parser.add_argument('--train_size', type=float, default=0.8)
+    parser.add_argument('--val_size', type=float, default=0.1)
+    parser.add_argument('--test_size', type=float, default=0.1)
+    parser.add_argument('--epochs', type=int, default=10)
+    parser.add_argument('--num_rounds', type=int, default=10)
+    parser.add_argument('--verbatim', action='store_true')
+    
+    # Optimizer variables
+    parser.add_argument('--optimizer', type=str, default='Adam')
+    parser.add_argument('--dropout', type=float, default=0.1)
+    parser.add_argument('--lr', type=float, default=0.001)
+    parser.add_argument('--lr_min', type=float, default=1e-6)
+    parser.add_argument('--lr_factor', type=float, default=0.5)
+    parser.add_argument('--lr_patience', type=int, default=10)
+    parser.add_argument('--lr_scheduler', type=str, default='ReduceLROnPlateau')
+    parser.add_argument('--clip', type=float, default=1.0)
+    parser.add_argument('--early_stopping_patience', type=int, default=10)
+    
+    # Dataset variables
+    parser.add_argument('--dataset', type=str, default=None)
+    parser.add_argument('--dataset_root', type=str, default=None)
+    parser.add_argument('--data_folder', type=str, default=None)
+    parser.add_argument('--train_filepath', type=str, default=None)
+    parser.add_argument('--test_filepath', type=str, default=None)
+    parser.add_argument('--target_label', type=str, default=None)
+    parser.add_argument('--n_channels', type=int, default=1)
+    
+    # Logging variables
+    parser.add_argument('--log_path', type=str, default='./')
+    parser.add_argument('--every_n_epochs', type=int, default=1)
+    parser.add_argument('--wandb_track', type=str, default="False")
+    parser.add_argument('--wandb_project', type=str, default=None)
+    parser.add_argument('--wandb_run_name', type=str, default=None)
+    parser.add_argument('--wandb_entity', type=str, default=None)
+    parser.add_argument('--save_top_k', type=int, default=1)
+    
+    # flcore-suite compatibility arguments
+    parser.add_argument("--model", type=str, default=None, help="Model to train")
+    parser.add_argument("--smooth_method", type=str, default="EqualVoting", help="Weight smoothing")
+    parser.add_argument("--smoothing_strenght", type=float, default=0.5)
+    parser.add_argument("--dropout_method", type=str, default=None)
+    parser.add_argument("--dropout_percentage", type=float, default=0.0)
+    parser.add_argument("--checkpoint_selection_metric", type=str, default="precision")
+    parser.add_argument("--experiment_name", type=str, default="experiment_1")
+    parser.add_argument("--balanced", type=str, default=None)
+    parser.add_argument("--n_estimators", type=int, default=100)
+    parser.add_argument("--max_depth", type=int, default=2)
+    parser.add_argument("--class_weight", type=str, default="balanced")
+    parser.add_argument("--levelOfDetail", type=str, default="DecisionTree")
+    parser.add_argument("--regression_criterion", type=str, default="squared_error")
+    parser.add_argument("--booster", type=str, default="gbtree")
+    parser.add_argument("--tree_method", type=str, default="hist")
+    parser.add_argument("--train_method", type=str, default="bagging")
+    parser.add_argument("--eta", type=float, default=0.1)
+    parser.add_argument("--l1_penalty", type=float, default=0.0)
+    parser.add_argument("--sandbox_path", type=str, default="/sandbox")
+    parser.add_argument("--local_port", type=int, default=8081)
+    parser.add_argument("--production_mode", type=str, default="True")
+    parser.add_argument("--n_features", type=int, default=0)
+    parser.add_argument("--n_feats", type=int, default=0)
+    parser.add_argument("--n_out", type=int, default=0)
 
-    # No needed to load data since that will be done by training torch lightning wrapper
+    args = parser.parse_args()
+    config = vars(args)
+    config = CheckClientConfig(config)
+# ____________________________________________________________________________________-
 
+    if config["production_mode"] == "True":
+        node_name = os.getenv("NODE_NAME")
+        data_path = os.getenv("DATA_PATH")
+        central_ip = os.getenv("FLOWER_CENTRAL_SERVER_IP")
+        central_port = os.getenv("FLOWER_CENTRAL_SERVER_PORT")
+        sandbox_path = os.getenv("SANDBOX_PATH")
+
+        flower_ssl_cacert = os.getenv("FLOWER_SSL_CACERT")
+        root_certificate = Path(f"{flower_ssl_cacert}").read_bytes()
+
+    else:
+        node_name = config["node_name"]
+        data_path = config["data_path"]
+        central_ip = "LOCALHOST"
+        central_port = config["local_port"]
+        sandbox_path = config["sandbox_path"]
+        root_certificate = None
+
+    # Create sandbox log file path
+    sandbox_log_file = Path(os.path.join(config["sandbox_path"], "log_client.txt"))
+    
     # Creation of the model instances
-    print(" ################################################### INITIAL PARAMS", params)
-
     #************* * * *  *  *  *   *    *    *  *  *  *  * * *************
     # Aquí empieza lo interesante. Lo demás está en principio listo.
     # Ten cuidado de generar los clientes con cuidado, sobre todo los
     # get parameters y set parameters y que sea consistente con la integración pl
-    client = FlowerClient(params).to_client()
-    print(" ________________________________________________  Cliente generado")
-    if params.use_certificates == True or params.use_certificates == "True":
-        fl.client.start_client(
-             server_address=params.server_address,
-             root_certificates=Path("./src/certificates/rootCA_cert.pem").read_bytes(),
-             client=client)
-    else:
-        fl.client.start_client(
-             server_address=params.server_address,
-             client=client)
     #************* * * *  *  *  *   *    *    *  *  *  *  * * *************
 
+    # No needed to load data since that will be done by training torch lightning wrapper
+    client = FlowerClient(config).to_client()
+    print(" ________________________________________________  Cliente generado")
+    
     print(" _____________________________________________client sim  :: main :: termina")
-
-
-if __name__ == "__main__":
-    main()
-
-"""
-
-# Cargar el certificado raíz
-root_cert = Path("./src/certificates/rootCA_cert.pem").read_bytes()
-
-# Crear las credenciales de seguridad TLS (solo necesitamos el certificado raíz)
-ssl_credentials = grpc.ssl_channel_credentials(root_cert)
-
-# Iniciar el cliente con TLS habilitado
-fl.client.start_client(
-    server_address=params.server_address,  # Dirección del servidor
-    client=client,  # Tu objeto cliente
-    credentials=ssl_credentials  # Proporcionar las credenciales TLS
-)
-
-
-    certificates=(
-                Path("./src/certificates/rootCA_cert.pem").read_bytes(),
-                Path("./src/certificates/server_cert.pem").read_bytes(),
-                Path("./src/certificates/server_key.pem").read_bytes(),
-            ),    config=fl.server.ServerConfig(num_rounds=params.num_rounds),
-        
-"""

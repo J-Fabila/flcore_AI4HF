@@ -65,14 +65,14 @@ class FinalLayer(nn.Module):
         return self.final(x)
 
 class UNet(nn.Module):
-    def __init__(self, params):
+    def __init__(self, config):
         super(UNet, self).__init__()
         pow_2 = [2**i for i in range(6, 15)]
-        self.depth = params.UNet_depth
-        bilinear = params.UNet_bilinear
+        self.depth = config['UNet_depth']
+        bilinear = config['UNet_bilinear']
 
         ################################################ Encoder
-        if params.UNet_custom_shape == "None":
+        if config['UNet_custom_shape'] == "None":
             blocks = [InitialLayer(1, 64)]
             for i in range(self.depth):
                 if i + 1 == self.depth and bilinear:
@@ -81,7 +81,7 @@ class UNet(nn.Module):
                     blocks.append(DownscalingBlock(pow_2[i], pow_2[i + 1]))
         else:
             blocks = []
-            for layer in params.UNet_custom_shape:
+            for layer in config['UNet_custom_shape']:
                 blocks.append(DownscalingBlock(layer[0], layer[1]))
 
         self.encoder = nn.Sequential(*blocks)
@@ -90,15 +90,15 @@ class UNet(nn.Module):
         pow_2 = pow_2[:self.depth + 1]
         pow_2.reverse()
         blocks = []
-        if params.UNet_custom_shape == "None":
+        if config['UNet_custom_shape'] == "None":
             for i in range(self.depth):
                 if bilinear and i + 1 != self.depth:
                     blocks.append(UpscalingBlock(pow_2[i], pow_2[i + 1] // 2))
                 else:
                     blocks.append(UpscalingBlock(pow_2[i], pow_2[i + 1]))
-            blocks.append(FinalLayer(64, params.n_classes))
+            blocks.append(FinalLayer(64, config['n_classes']))
         else:
-            for layer in params.UNet_custom_shape:
+            for layer in config['UNet_custom_shape']:
                 blocks.append(UpscalingBlock(layer[0], layer[1]))
 
         self.decoder = nn.Sequential(*blocks)
