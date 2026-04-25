@@ -1,7 +1,0 @@
-version: '3'
-services:
-  myapp:
-    build:
-      context: .
-    volumes:
-      - ./script.py:/app/script.py  # Mapea el script al contenedor
