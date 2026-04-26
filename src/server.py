@@ -60,52 +60,18 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(description="Reads parameters from command line.")
     # General settings
-    parser.add_argument("--model", type=str, default=None, help="Model to train")
-    parser.add_argument("--task", type=str, default=None, help="Task to train")
+    parser.add_argument("--model", type=str, default="MLP", help="Model to train")
     parser.add_argument("--num_rounds", type=int, default=50, help="Number of federated iterations")
     parser.add_argument("--num_clients", type=int, default=1, help="Number of clients")
     parser.add_argument("--min_fit_clients", type=int, default=0, help="Minimum number of fit clients")
     parser.add_argument("--min_evaluate_clients", type=int, default=0, help="Minimum number of evaluate clients")
     parser.add_argument("--min_available_clients", type=int, default=0, help="Minimum number of available clients")
-    parser.add_argument("--seed", type=int, default=42, help="Seed")
+    parser.add_argument('--production_mode', type=str, default="False")
 
     # Strategy settings
     parser.add_argument("--strategy", type=str, default="FedAvg",  help="Metrics")
-    parser.add_argument("--smooth_method", type=str, default="EqualVoting", help="Weight smoothing")
-    parser.add_argument("--smoothing_strenght", type=float, default=0.5, help="Smoothing strenght")
-    parser.add_argument("--dropout_method", type=str, default=None, help="Determines if dropout is used")
-    parser.add_argument("--dropout_percentage", type=float, default=0.0, help="Ratio of dropout nodes")
-    parser.add_argument("--checkpoint_selection_metric", type=str, default="precision", help="Metric used for checkpoints")
     parser.add_argument("--metrics_aggregation", type=str, default="weighted_average",  help="Metrics")
     parser.add_argument("--experiment_name", type=str, default="experiment_1", help="Experiment directory")
-
-    # Model specific RandomForest settings
-    parser.add_argument("--balanced", type=str, default=None, help="Random forest balanced")
-    parser.add_argument("--n_estimators", type=int, default=100, help="Number of estimators")
-    parser.add_argument("--max_depth", type=int, default=2, help="Max depth")
-    parser.add_argument("--class_weight", type=str, default="balanced", help="Class weight")
-    parser.add_argument("--levelOfDetail", type=str, default="DecisionTree", help="Level of detail")
-    parser.add_argument("--regression_criterion", type=str, default="squared_error", help="Criterion for training")
-
-    # Model specifc XGB settings
-    parser.add_argument("--booster", type=str, default="gbtree", help="Booster to use: gbtree, gblinear or dart")
-    parser.add_argument("--tree_method", type=str, default="hist", help="Tree method: exact, approx hist")
-    parser.add_argument("--train_method", type=str, default="bagging", help="Train method: bagging, cyclic")
-    parser.add_argument("--eta", type=float, default=0.1, help="ETA value")
-
-    # Model specifc Cox settings
-    parser.add_argument("--l1_penalty", type=float, default=0.0, help="L1 Penalty")
-
-    # *******************************************************************************************
-    # Parámetros que deberían eliminarse
-    parser.add_argument("--sandbox_path", type=str, default="/sandbox", help="Sandbox path to use")
-    parser.add_argument("--local_port", type=int, default=8081, help="Local port")
-    parser.add_argument("--production_mode", type=str, default="True",  help="Production mode")
-    #parser.add_argument("--certs_path", type=str, default="./", help="Certificates path")
-    parser.add_argument("--n_features", type=int, default=0, help="Number of features")
-    parser.add_argument("--n_feats", type=int, default=0, help="Number of features")
-    parser.add_argument("--n_out", type=int, default=0, help="Number of outputs")
-    # *******************************************************************************************
 
     args = parser.parse_args()
     config = vars(args)

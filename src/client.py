@@ -72,7 +72,7 @@ class FlowerClient(fl.client.NumPyClient):
             model = ModelWrapper(self.config)
             self.model = model.to(device)
 
-        if self.config['local_model'] == "MLP":
+        if self.config['model'] == "MLP":
             if self.config['MLP_preprocess'] == "True":
             #************* * * *  *  *  *   *  Data preprocessing  *    *  *  *  *  * * *************
                 configuration = load_json_config(self.config['configuration_file'])
@@ -98,7 +98,7 @@ class FlowerClient(fl.client.NumPyClient):
 
     def get_parameters(self, config): # config not needed at all
         print(f"[Client {self.config['client_id']}] get_parameters")
-        if self.config['local_model'] == "MLP":
+        if self.config['model'] == "MLP":
             loc_model = torch.load(self.model_file)
             print("regresa valores")
             #print([val.cpu().numpy() for  val in loc_model.values()])
@@ -108,7 +108,7 @@ class FlowerClient(fl.client.NumPyClient):
 
     def set_parameters(self, parameters:List[np.ndarray]):
         print(f"[Client {self.config['client_id']}] set_parameters")
-        if self.config['local_model'] == "MLP":
+        if self.config['model'] == "MLP":
             # # fFalta sacar el model_keys de algun lado           
             params_dict = zip(self.model_keys(), parameters)
             state_dict = OrderedDict({k: torch.tensor(v) for k, v in params_dict})
@@ -204,37 +204,23 @@ if __name__ == "__main__":
     parser.add_argument('--num_workers', type=int, default=4)
     parser.add_argument('--client_id', type=int, default=None)
     parser.add_argument('--num_clients', type=int, default=5)
-    parser.add_argument('--set_server', type=str, default="False") #action='store_true')
-    parser.add_argument('--strategy', type=str, default=None)
-    parser.add_argument('--min_fit_clients', type=int, default=2)
-    parser.add_argument('--min_evaluate_clients', type=int, default=2)
-    parser.add_argument('--min_available_clients', type=int, default=2)
-    parser.add_argument('--metrics_aggregation', type=str, default=None)
     parser.add_argument('--server_address', type=str, default=None)
     
     # Model variables
-    parser.add_argument('--federated', type=str, default="False")
-    parser.add_argument('--use_certificates', type=str, default="False")
-    parser.add_argument('--local_model', type=str, default=None)
+    parser.add_argument('--production_mode', type=str, default="False")
+    parser.add_argument('--model', type=str, default="MLP")
     parser.add_argument('--features', type=str, default=None)
     parser.add_argument('--configuration_file', type=str, default=None)
-    parser.add_argument('--load_checkpoint', type=str, default=None)
-    parser.add_argument('--task', type=str, default=None)
-    parser.add_argument('--in_channels', type=int, default=None)
-    parser.add_argument('--num_labels', type=int, default=1)
+
     parser.add_argument('--feature_size', type=int, default=1)
-    parser.add_argument('--mlp_hidden_sizes', type=int, nargs='+', default=[1,1])
-    parser.add_argument('--mlp_output_size', type=int, default=1)
-    parser.add_argument('--ode_hidden_size', type=int, default=1)
-    parser.add_argument('--ode_num_layers', type=int, default=1)
-    parser.add_argument('--ode_batch_norm', type=int, default=1)
+    parser.add_argument('--mlp_hidden_sizes', type=int, nargs='+', default=[128, 256, 128])
+    parser.add_argument('--mlp_output_size', type=int, default=64)
+    parser.add_argument('--ode_hidden_size', type=int, default=64)
+    parser.add_argument('--ode_num_layers', type=int, default=2)
+    parser.add_argument('--ode_batch_norm', type=str, default="False")
     parser.add_argument('--time_nums', type=int, default=50)
     parser.add_argument('--MLP_preprocess', type=str, default=None)
-    parser.add_argument('--n_classes', type=int, default=None)
-    parser.add_argument('--UNet_depth', type=int, default=None)
-    parser.add_argument('--UNet_bilinear', action='store_true')
-    parser.add_argument('--UNet_custom_shape', type=str, default=None)
-    
+
     # Training variables
     parser.add_argument('--batch_size', type=int, default=32)
     parser.add_argument('--train_size', type=float, default=0.8)
@@ -242,7 +228,7 @@ if __name__ == "__main__":
     parser.add_argument('--test_size', type=float, default=0.1)
     parser.add_argument('--epochs', type=int, default=10)
     parser.add_argument('--num_rounds', type=int, default=10)
-    parser.add_argument('--verbatim', action='store_true')
+    parser.add_argument('--verbatim', type=str, default="False")
     
     # Optimizer variables
     parser.add_argument('--optimizer', type=str, default='Adam')
@@ -272,32 +258,6 @@ if __name__ == "__main__":
     parser.add_argument('--wandb_run_name', type=str, default=None)
     parser.add_argument('--wandb_entity', type=str, default=None)
     parser.add_argument('--save_top_k', type=int, default=1)
-    
-    # flcore-suite compatibility arguments
-    parser.add_argument("--model", type=str, default=None, help="Model to train")
-    parser.add_argument("--smooth_method", type=str, default="EqualVoting", help="Weight smoothing")
-    parser.add_argument("--smoothing_strenght", type=float, default=0.5)
-    parser.add_argument("--dropout_method", type=str, default=None)
-    parser.add_argument("--dropout_percentage", type=float, default=0.0)
-    parser.add_argument("--checkpoint_selection_metric", type=str, default="precision")
-    parser.add_argument("--experiment_name", type=str, default="experiment_1")
-    parser.add_argument("--balanced", type=str, default=None)
-    parser.add_argument("--n_estimators", type=int, default=100)
-    parser.add_argument("--max_depth", type=int, default=2)
-    parser.add_argument("--class_weight", type=str, default="balanced")
-    parser.add_argument("--levelOfDetail", type=str, default="DecisionTree")
-    parser.add_argument("--regression_criterion", type=str, default="squared_error")
-    parser.add_argument("--booster", type=str, default="gbtree")
-    parser.add_argument("--tree_method", type=str, default="hist")
-    parser.add_argument("--train_method", type=str, default="bagging")
-    parser.add_argument("--eta", type=float, default=0.1)
-    parser.add_argument("--l1_penalty", type=float, default=0.0)
-    parser.add_argument("--sandbox_path", type=str, default="/sandbox")
-    parser.add_argument("--local_port", type=int, default=8081)
-    parser.add_argument("--production_mode", type=str, default="True")
-    parser.add_argument("--n_features", type=int, default=0)
-    parser.add_argument("--n_feats", type=int, default=0)
-    parser.add_argument("--n_out", type=int, default=0)
 
     args = parser.parse_args()
     config = vars(args)
