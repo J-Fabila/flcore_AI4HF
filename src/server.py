@@ -3,6 +3,7 @@ import sys
 import json
 import numpy as np
 import torch
+import argparse
 from pathlib import Path
 from typing import List, Tuple
 from collections import OrderedDict
@@ -17,8 +18,8 @@ from model_wrapper import ModelWrapper
 sys.path.append("/home/jorge/work_dir/nouman/passport/python-auto-metadata-collection/lib")
 #sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "lib")))
 
-from ai4hf_passport_torch import TorchMetadataCollectionAPI
-from ai4hf_passport_models import LearningStage, EvaluationMeasure, Model, LearningStageType, EvaluationMeasureType
+#from ai4hf_passport_torch import TorchMetadataCollectionAPI
+#from ai4hf_passport_models import LearningStage, EvaluationMeasure, Model, LearningStageType, EvaluationMeasureType
 
 def weighted_average(metrics: List[Tuple[int, Metrics]]) -> Metrics:
     aggregated = {}
@@ -66,7 +67,9 @@ if __name__ == "__main__":
     parser.add_argument("--min_fit_clients", type=int, default=0, help="Minimum number of fit clients")
     parser.add_argument("--min_evaluate_clients", type=int, default=0, help="Minimum number of evaluate clients")
     parser.add_argument("--min_available_clients", type=int, default=0, help="Minimum number of available clients")
-    parser.add_argument('--production_mode', type=str, default="False")
+    parser.add_argument("--production_mode", type=str, default="False")
+    parser.add_argument("--local_port", type=str, default="8080")
+    parser.add_argument("--sandbox_path", type=str, default="./sandbox", help="Sandbox path to use")
 
     # Strategy settings
     parser.add_argument("--strategy", type=str, default="FedAvg",  help="Metrics")
@@ -75,7 +78,6 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
     config = vars(args)
-    config = CheckServerConfig(config)
 
     if config['metrics_aggregation'] == "weighted_average":
         metrics = weighted_average
@@ -110,7 +112,6 @@ if __name__ == "__main__":
     checkpoint_dir = experiment_dir / "checkpoints"
     checkpoint_dir.mkdir(parents=True, exist_ok=True)
 
-
     if config['strategy'] == "FedAvg":
         """
         strategy = fl.server.strategy.FedAvg(evaluate_metrics_aggregation_fn=metrics,
@@ -132,29 +133,34 @@ if __name__ == "__main__":
         min_fit_clients = config['min_fit_clients'],
         min_evaluate_clients = config['min_evaluate_clients'],
         min_available_clients = config['min_available_clients'])
-    if config['use_certificates'] == True or config['use_certificates'] == "True":
-        fl.server.start_server(
-            server_address=config['server_address'],
-            #server_address="[SERVER_IP]:[PORT]"
-                certificates=(
-                    Path("./src/certificates/rootCA_cert.pem").read_bytes(),
-                    Path("./src/certificates/server_cert.pem").read_bytes(),
-                    Path("./src/certificates/server_key.pem").read_bytes(),
-                ),    config=fl.server.ServerConfig(num_rounds=config['num_rounds']),
-            strategy=strategy,
+
+    if config["production_mode"] == "True":
+#        data_path = os.getenv("DATA_PATH")
+        central_ip = os.getenv("FLOWER_CENTRAL_SERVER_IP")
+        central_port = os.getenv("FLOWER_CENTRAL_SERVER_PORT")
+        sandbox_path = os.getenv("SANDBOX_PATH")
+
+        certificates = (
+            Path(os.getenv("FLOWER_SSL_CACERT")).read_bytes(),
+            Path('certificates/server.pem').read_bytes(),
+            Path('certificates/server.key').read_bytes(),
         )
     else:
-        fl.server.start_server(
-        server_address=config['server_address'],
-        #server_address="[SERVER_IP]:[PORT]"
-        #    certificates=(
-        #        Path("./src/certificates/rootCA_cert.pem").read_bytes(),
-        #        Path("./src/certificates/server_cert.pem").read_bytes(),
-        #        Path("./src/certificates/server_key.pem").read_bytes(),
-        #    ),    
-        config=fl.server.ServerConfig(num_rounds=config['num_rounds']),
+#        data_path = config["data_path"]
+        central_ip = "LOCALHOST"
+        central_port = config["local_port"]
+        sandbox_path = config["sandbox_path"]
+        certificates = None
+
+    # Start Flower server for three rounds of federated learning
+    history = fl.server.start_server(
+        server_address=f"{central_ip}:{central_port}",
+        config=fl.server.ServerConfig(num_rounds=config["num_rounds"], round_timeout=None ),
+#        server=server,
         strategy=strategy,
+        certificates = certificates,
     )
+
     # ******** * * *  *  *   *    *   *   *   *  * * * * * * **************
     if config['model'] == "MLP":
         configurations = [
@@ -218,6 +224,7 @@ if __name__ == "__main__":
     # ******** * * *  *  *   *    *   *   *   *  * * * * * * **************
     # Construct an api client for interacting with AI4HF passport server
 
+"""
     api_client = TorchMetadataCollectionAPI(
             passport_server_url="http://localhost:80/ai4hf/passport/api",
             study_id="1",
@@ -249,10 +256,8 @@ if __name__ == "__main__":
         EvaluationMeasure(EvaluationMeasureType.AUC,
                         value = str(metrics_file["tempauroc"]))
     ]
-    """
-            loss defined :
-            loss_fct = SurvODELoss(reduction='mean')
-    """
+    #        loss defined :
+    #        loss_fct = SurvODELoss(reduction='mean')
     # Provide model details
     model_info = Model(
         name = "test",
@@ -261,3 +266,4 @@ if __name__ == "__main__":
 
     # Call this function with your model object
     api_client.submit_results_to_ai4hf_passport(model, learning_stages, evaluation_measures, model_info)
+    """
