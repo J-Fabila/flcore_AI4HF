@@ -68,7 +68,7 @@ if __name__ == "__main__":
     parser.add_argument("--min_evaluate_clients", type=int, default=0, help="Minimum number of evaluate clients")
     parser.add_argument("--min_available_clients", type=int, default=0, help="Minimum number of available clients")
     parser.add_argument("--production_mode", type=str, default="False")
-    parser.add_argument("--local_port", type=str, default="8080")
+    parser.add_argument("--local_port", type=str, default="8081")
     parser.add_argument("--sandbox_path", type=str, default="./sandbox", help="Sandbox path to use")
 
     # Strategy settings

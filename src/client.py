@@ -1,8 +1,10 @@
 import os
 import sys
+import time
 import torch
 import flwr as fl
 import numpy as np
+import argparse
 from typing import Dict, List, Tuple
 
 from pathlib import Path
@@ -20,12 +22,11 @@ from data_mlp import process_imputed_data
 from Models.MLP.model import MLP_SODEN
 from mlp_trainer import main_training_loop
 
-from model_wrapper import ModelWrapper
+#from model_wrapper import ModelWrapper
 from dataloaders import MMsDataSet,LightningWrapperData  
 
 class FlowerClient(fl.client.NumPyClient):
     def __init__(self, config):
-        print("INICIA")
         self.config = config
         if torch.cuda.is_available() and config['device'] == 'cuda':
             device = torch.device('cuda')
@@ -43,13 +44,12 @@ class FlowerClient(fl.client.NumPyClient):
             'ode_hidden_size': 16, 'ode_num_layers': 2, 'ode_batch_norm': False,'time_nums': 62
             }
             ]
-            print("LEYO PARAMETROS")
             if config['features'] == "maggic":
                 config_selector = 0
             elif config['features'] == "maggic_plus":
                 config_selector = 1
-            print("CONFIG SELECTOR", config_selector)
-            self.config = configurations[config_selector]
+# *************** AQUI EN VEZ DE SUSTITUIR EL DICCIOARNIO AÑADIR NUEVAS KEYS Y PUNTO
+            self.config.update(configurations[config_selector])
             #Aqui primer problema: esto no debería estar alambrado
             #self.model_folder = '/home/jorge/work_dir/nouman/AI4HF-OXF-Modelling/new_models'
             # o sería mejor ponerlo como variable
@@ -66,38 +66,17 @@ class FlowerClient(fl.client.NumPyClient):
 
 #            model.suffix = self.config['features']
             self.optimizer = optim.Adam(model.parameters(), lr=1e-3)
-            self.scheduler = ReduceLROnPlateau(self.optimizer, mode='min', factor=0.1, patience=self.config['lr_patience'], verbose=True)
+            self.scheduler = ReduceLROnPlateau(self.optimizer, mode='min', factor=0.1, patience=config['lr_patience'], verbose=True)
 
-        else:
-            model = ModelWrapper(self.config)
-            self.model = model.to(device)
-
-        if self.config['model'] == "MLP":
-            if self.config['MLP_preprocess'] == "True":
+        if config['model'] == "MLP":
+            if config['MLP_preprocess'] == "True":
             #************* * * *  *  *  *   *  Data preprocessing  *    *  *  *  *  * * *************
-                configuration = load_json_config(self.config['configuration_file'])
+                configuration = load_json_config(config['configuration_file'])
                 # Process imputed data
                 process_imputed_data(configuration)
             #************* * * *  *  *  *   *   *      *     *     *    *  *  *  *  * * *************
-            else:
-                pass
-
-        else:
-            if self.config['dataset'] == "MMs":
-                self.dataset = MMsDataSet(self.config)
-                
-                #self.dataset = MLPWrapperData(params)
-
-            elif self.config['dataset'] == "LightningWrapperData":
-                self.dataset = LightningWrapperData(self.config)
-            else:
-                print("Dataset not available")
-                exit()
-            print("CLIENT::FLOWER CLIENT")    
-            self.dataset.setup("fit")
 
     def get_parameters(self, config): # config not needed at all
-        print(f"[Client {self.config['client_id']}] get_parameters")
         if self.config['model'] == "MLP":
             loc_model = torch.load(self.model_file)
             print("regresa valores")
@@ -127,7 +106,6 @@ class FlowerClient(fl.client.NumPyClient):
 
     def fit(self, parameters, params):
         if self.config['model'] == "MLP":
-            print("FIT :: ENTRA MLP self local model ")
             train_filepath = os.path.join(self.config['data_folder'], f"train_{self.config['features']}.pt")
             test_filepath = os.path.join(self.config['data_folder'], f"valid_{self.config['features']}.pt")
             model_path = self.model_folder # el directorio de log de los params
@@ -166,7 +144,7 @@ class FlowerClient(fl.client.NumPyClient):
         return loss, 10000, {"loss": loss}
     """
     def evaluate(self, parameters, params):
-        if self.config['local_model'] == "MLP":
+        if self.config['model'] == "MLP":
             #return tempprc, tempauroc, test_loss, model
 #            return 0.0, 1, {"accuracy":0.0}
 #           OJO que tendrías que cambiar las variables en el server: linea 14 en la definicion del weighted avarage
@@ -202,24 +180,19 @@ if __name__ == "__main__":
     parser.add_argument('--n_gpu', type=int, default=1)
     parser.add_argument('--n_gpu_nodes', type=int, default=1)
     parser.add_argument('--num_workers', type=int, default=4)
-    parser.add_argument('--client_id', type=int, default=None)
+    parser.add_argument('--client_id', type=str, default="client")
     parser.add_argument('--num_clients', type=int, default=5)
-    parser.add_argument('--server_address', type=str, default=None)
-    
-    # Model variables
     parser.add_argument('--production_mode', type=str, default="False")
-    parser.add_argument('--model', type=str, default="MLP")
-    parser.add_argument('--features', type=str, default=None)
-    parser.add_argument('--configuration_file', type=str, default=None)
+    parser.add_argument("--local_port", type=str, default="8081")
+    parser.add_argument('--server_address', type=str, default=None)
+    parser.add_argument("--sandbox_path", type=str, default="./sandbox", help="Sandbox path to use")
 
-    parser.add_argument('--feature_size', type=int, default=1)
-    parser.add_argument('--mlp_hidden_sizes', type=int, nargs='+', default=[128, 256, 128])
-    parser.add_argument('--mlp_output_size', type=int, default=64)
-    parser.add_argument('--ode_hidden_size', type=int, default=64)
-    parser.add_argument('--ode_num_layers', type=int, default=2)
-    parser.add_argument('--ode_batch_norm', type=str, default="False")
-    parser.add_argument('--time_nums', type=int, default=50)
-    parser.add_argument('--MLP_preprocess', type=str, default=None)
+    # Model variables
+    parser.add_argument('--model', type=str, default="MLP")
+    parser.add_argument('--task', type=str, default="classification")
+    parser.add_argument('--features', type=str, default="maggic")
+    parser.add_argument('--configuration_file', type=str, default="configs/sample_config.json")
+    parser.add_argument('--MLP_preprocess', type=str, default="True")
 
     # Training variables
     parser.add_argument('--batch_size', type=int, default=32)
@@ -242,13 +215,7 @@ if __name__ == "__main__":
     parser.add_argument('--early_stopping_patience', type=int, default=10)
     
     # Dataset variables
-    parser.add_argument('--dataset', type=str, default=None)
-    parser.add_argument('--dataset_root', type=str, default=None)
     parser.add_argument('--data_folder', type=str, default=None)
-    parser.add_argument('--train_filepath', type=str, default=None)
-    parser.add_argument('--test_filepath', type=str, default=None)
-    parser.add_argument('--target_label', type=str, default=None)
-    parser.add_argument('--n_channels', type=int, default=1)
     
     # Logging variables
     parser.add_argument('--log_path', type=str, default='./')
@@ -261,12 +228,11 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
     config = vars(args)
-    config = CheckClientConfig(config)
 # ____________________________________________________________________________________-
 
     if config["production_mode"] == "True":
         node_name = os.getenv("NODE_NAME")
-        data_path = os.getenv("DATA_PATH")
+        data_path = os.getenv("DATA_FOLDER")
         central_ip = os.getenv("FLOWER_CENTRAL_SERVER_IP")
         central_port = os.getenv("FLOWER_CENTRAL_SERVER_PORT")
         sandbox_path = os.getenv("SANDBOX_PATH")
@@ -275,8 +241,10 @@ if __name__ == "__main__":
         root_certificate = Path(f"{flower_ssl_cacert}").read_bytes()
 
     else:
-        node_name = config["node_name"]
-        data_path = config["data_path"]
+        print("**********************************PROD MODE FALSE")
+        print("CONFIG LOCAL PORT", config["local_port"])
+        node_name = config["client_id"]
+        data_path = config["data_folder"]
         central_ip = "LOCALHOST"
         central_port = config["local_port"]
         sandbox_path = config["sandbox_path"]
@@ -294,6 +262,46 @@ if __name__ == "__main__":
 
     # No needed to load data since that will be done by training torch lightning wrapper
     client = FlowerClient(config).to_client()
+    fl.client.start_client(
+        server_address=f"{central_ip}:{central_port}",
+        # credentials=ssl_credentials,
+        root_certificates=root_certificate,
+        client=client,
+        #channel=channel,
+    )
     print(" ________________________________________________  Cliente generado")
-    
+    """
+    for attempt in range(3):
+        try:
+            if isinstance(client, fl.client.NumPyClient):
+                print("IS INSTANCE OF NUMPY CLIENT")
+                fl.client.start_numpy_client(
+                    server_address=f"{central_ip}:{central_port}",
+                    #credentials=ssl_credentials,
+                    root_certificates=root_certificate,
+                    client=client,
+                    #channel=channel,
+                )
+            else:
+                print("***************ELSE")
+                print("CENTRAL IP", central_ip)
+                print("CENTRAL PORT", central_port)
+                print("ROOT CERT", root_certificate)
+                print("_________________________________")
+                fl.client.start_client(
+                    server_address=f"{central_ip}:{central_port}",
+                    # credentials=ssl_credentials,
+                    root_certificates=root_certificate,
+                    client=client,
+                    #channel=channel,
+                )
+            break  # Si todo salió bien, salimos del bucle
+        except Exception as e:
+            print(f"Attempt {attempt + 1} failed: {e}")
+            if attempt < 2:
+                time.sleep(2)  # Espera un poco antes de reintentar
+            else:
+                print("All connection attempts failed.")
+                raise
+    """
     print(" _____________________________________________client sim  :: main :: termina")

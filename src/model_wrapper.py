@@ -23,19 +23,19 @@ class ModelWrapper(pl.LightningModule):
         super(ModelWrapper, self).__init__()
         self.config = config
         self.task = config['task']
-        if self.config['local_model'] == "Basic":
+        if self.config['model'] == "Basic":
             self.local_model = BasicConvolutional(config)
-        if self.config['local_model'] == "UNet":
+        if self.config['model'] == "UNet":
             self.local_model = UNet(config)
-        elif self.config['local_model'] == "Resnet18":
+        elif self.config['model'] == "Resnet18":
             self.local_model = resnet18(config)
-        elif self.config['local_model'] == "Resnet34":
+        elif self.config['model'] == "Resnet34":
             self.local_model = resnet34(config)
-        elif self.config['local_model'] == "Resnet50":
+        elif self.config['model'] == "Resnet50":
             self.local_model = resnet50(config)
-        elif self.config['local_model'] == "Resnet101":
+        elif self.config['model'] == "Resnet101":
             self.local_model = resnet101(config)
-        elif self.config['local_model'] == "Resnet152":
+        elif self.config['model'] == "Resnet152":
             self.local_model = resnet152(config)
             # Quantized ResNet
         else:
