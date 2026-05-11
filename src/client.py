@@ -1,6 +1,7 @@
 import os
 import sys
 import time
+import glob
 import torch
 import flwr as fl
 import numpy as np
@@ -72,6 +73,16 @@ class FlowerClient(fl.client.NumPyClient):
             if config['MLP_preprocess'] == "True":
             #************* * * *  *  *  *   *  Data preprocessing  *    *  *  *  *  * * *************
                 configuration = load_json_config(config['configuration_file'])
+                # AQUI SE MODIFICAN LAS VARS SI HACEN FALTA
+                configuration["data_folder"] = config['data_folder']
+                pattern = "*.parquet"
+                parquet_files = glob.glob(os.path.join(configuration["data_folder"], pattern))
+                if len(parquet_files) == 0:
+                    print("No parquet files found in ",configuration["data_folder"])
+                    sys.exit()
+
+                nombre_archivo = parquet_files[-1]
+                configuration["file_path"] = os.path.join(config['data_folder'], nombre_archivo)
                 # Process imputed data
                 process_imputed_data(configuration)
             #************* * * *  *  *  *   *   *      *     *     *    *  *  *  *  * * *************
